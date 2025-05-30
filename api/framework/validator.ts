@@ -1,10 +1,10 @@
 import fs from "fs";
-import { expect } from "chai";
+import { expect } from "@playwright/test";
 import { OpenApiDocument, OpenApiValidator } from "express-openapi-validate";
 
 const debugL1 = require('debug')('fw-L1-validator');
 export class Validator {
-    protected openApiValidator: OpenApiValidator = undefined;
+    protected openApiValidator!: OpenApiValidator;
 
     public constructor() {
         try {
@@ -17,7 +17,7 @@ export class Validator {
 
     validate(message: any, method: any, ep: any) {
         const validateResponse = this.openApiValidator.validateResponse(method, ep);
-        expect(validateResponse(message)).to.be.undefined;
+        expect(validateResponse(message)).toBeUndefined();
         return message;
     }
 }

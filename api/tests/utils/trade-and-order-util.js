@@ -1,4 +1,5 @@
-const { equals, delay } = require('@yaalalabs/p8-e2e-api-framework');
+const { delay } = require('../../framework/utils');
+const { equals } = require('../../framework/verify');
 const {v4: uuidv4} = require("uuid");
 function createOrderUpdatePayload(buy, sell) {
     return {

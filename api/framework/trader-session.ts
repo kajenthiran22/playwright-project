@@ -1,11 +1,10 @@
-import { AxiosError, AxiosResponse } from 'axios';
+import { request, APIResponse, APIRequestContext } from '@playwright/test';
 import { getReferenceData, getTraderApiEndPoint, getTraderApiUrl, updateReferenceData, UrlParams } from './configuration';
 import { RestClient } from './rest-client';
 import { Session, SessionType } from './session';
 import { WebSocket } from './web-socket';
 import { v4 as uuidv4 } from 'uuid';
-import chai from 'chai';
-
+import { expect } from "@playwright/test";
 
 const debugL3 = require('debug')('fw-L3-trader-session');
 const debugL2 = require('debug')('fw-L2-trader-session');
@@ -13,11 +12,11 @@ const debugL1 = require('debug')('fw-L1-trader-session');
 
 export class TraderSession extends Session {
 
-    protected err: AxiosError;
-    protected client: RestClient;
-    protected socket: WebSocket;
-    protected orders: any[];
-    protected quotes: any[];
+    protected err: any;
+    protected client!: RestClient;
+    protected socket!: WebSocket;
+    protected orders!: any[];
+    protected quotes!: any[];
     protected id: number;
     protected firmId?: string;
 
@@ -34,7 +33,7 @@ export class TraderSession extends Session {
 
         await super.login();
 
-        this.client = new RestClient(this);
+        this.client = await RestClient.create(this);
         this.socket = new WebSocket(this, options);
         await this.socket.connect();
 
@@ -159,7 +158,7 @@ export class TraderSession extends Session {
         debugL1(" subscribeForNotifications", options)
         await super.login();
 
-        this.client = new RestClient(this);
+        this.client = await RestClient.create(this);
 
         this.socket = new WebSocket(this, options);
         await this.socket.connect();
@@ -207,7 +206,7 @@ export class TraderSession extends Session {
     public async lazyStart() {
         await super.login();
 
-        this.client = new RestClient(this);
+        this.client = await RestClient.create(this);
 
         this.socket = new WebSocket(this);
         await this.socket.connect();
@@ -236,7 +235,7 @@ export class TraderSession extends Session {
     public async expect(message: any, timeout: any = 0, splice: boolean = true) {
         if (this.socket.connected() == false) {
             debugL1("socket disconnected. expect will fail")
-            chai.expect.fail('socket disconnected');
+            throw new Error('socket disconnected');
         }
         return await this.socket.expect(message, timeout, splice);
         // try{
@@ -265,79 +264,94 @@ export class TraderSession extends Session {
 
     private async postWithValidate(id: string, message: any, validateResponse: boolean = false) {
         this.err = null;
-        let result = await this.client.post<any>(getTraderApiUrl(id), message)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: AxiosError) => {
-                debugL1('error:\n' + JSON.stringify(err.response.data));
-                this.err = err;
-                return err.response;
-            });
+        try {
+            const response: APIResponse = await this.client.post(getTraderApiUrl(id), message);     ///////////////
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
 
-        if ((validateResponse) && (this.err != null))
-            this.validateResponse(result, 'post', getTraderApiEndPoint(id));
+            if (validateResponse && !response.ok()) {
+                this.validateResponse(response, 'post', getTraderApiEndPoint(id));
+            }
+            return responseBody;
+        } catch (error: any) {
+            this.err = error;
+            const data = error?.response ? await error.response.json() : error;
+            debugL1(`error:\n` + JSON.stringify(data));
 
-        return result.data;
+            if (validateResponse) {
+                this.validateResponse(error.response, 'post', getTraderApiEndPoint(id));
+            }
+            throw error;
+        }
     }
 
     private async putWithValidate(id: string, message: any, validateResponse: boolean = false, params?: UrlParams) {
         this.err = null;
-        let result = await this.client.put<any>(getTraderApiUrl(id, params), message)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response;
-            });
+        try {
+            const response: APIResponse = await this.client.put(getTraderApiUrl(id, params), message);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
 
-        if ((validateResponse) && (this.err != null))
-            this.validateResponse(result, 'put', getTraderApiEndPoint(id));
+            if (validateResponse && !response.ok()) {
+                this.validateResponse(response, 'put', getTraderApiEndPoint(id));
+            }
+            return responseBody;
+        } catch (error: any) {
+            this.err = error;
+            const data = error?.response ? await error.response.json() : error;
+            debugL1(`error:\n` + JSON.stringify(data));
 
-        return result.data;
+            if (validateResponse) {
+                this.validateResponse(error.response, 'put', getTraderApiEndPoint(id));
+            }
+            throw error;
+        }
     }
 
     private async getWithValidate(id: string, params?: UrlParams, validateResponse: boolean = false) {
         this.err = null;
-        let result = await this.client.get<any>(getTraderApiUrl(id, params))
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: AxiosError) => {
-                debugL1('error: (' + err.response.status + ')\n' + JSON.stringify(err.response.data));
-                this.err = err;
-                return err.response;
-            });
+        try {
+            const response: APIResponse = await this.client.get(getTraderApiUrl(id, params));
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
 
-        if ((validateResponse) && (this.err != null))
-            this.validateResponse(result, 'get', getTraderApiEndPoint(id));
+            if (validateResponse && !response.ok()) {
+                this.validateResponse(response, 'get', getTraderApiEndPoint(id));
+            }
+            return responseBody;
+        } catch (error: any) {
+            this.err = error;
+            const data = error?.response ? await error.response.json() : error;
+            debugL1(`error:\n` + JSON.stringify(data));
 
-        return result.data;
+            if (validateResponse) {
+                this.validateResponse(error.response, 'get', getTraderApiEndPoint(id));
+            }
+            throw error;
+        }
     }
 
     private async deleteWithValidate(id: string, message: any, validateResponse: boolean = false) {
         this.err = null;
-        let result = await this.client.delete<any>(getTraderApiUrl(id), message)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: AxiosError) => {
-                debugL1('error:\n' + JSON.stringify(err.response.data));
-                this.err = err;
-                return err.response;
-            });
+        try {
+            const response: APIResponse = await this.client.delete(getTraderApiUrl(id), message);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
 
-        if ((validateResponse) && (this.err != null))
-            this.validateResponse(result, 'delete', getTraderApiEndPoint(id));
+            if (validateResponse && !response.ok()) {
+                this.validateResponse(response, 'delete', getTraderApiEndPoint(id));
+            }
+            return responseBody;
+        } catch (error: any) {
+            this.err = error;
+            const data = error?.response ? await error.response.json() : error;
+            debugL1(`error:\n` + JSON.stringify(data));
 
-        return result.data;
+            if (validateResponse) {
+                this.validateResponse(error.response, 'delete', getTraderApiEndPoint(id));
+            }
+            throw error;
+        }
     }
 
     public async submitOrder(order: any, validateResponse: boolean = false) {
@@ -660,32 +674,32 @@ export class TraderSession extends Session {
         return result;
     }
 
-    public async createRFQBulkRequest(rfqRequestArray: any[], messageType: string = "RFQ_CREATE_REQUEST", validateResponse: boolean = false) {
-        const bulkRequest = { "messageType": messageType, "payload": [] };
+    // public async createRFQBulkRequest(rfqRequestArray: any[], messageType: string = "RFQ_CREATE_REQUEST", validateResponse: boolean = false) {
+    //     const bulkRequest = { "messageType": messageType, "payload": [] };
 
-        for (var rfqRequest of rfqRequestArray) {
-            rfqRequest.requestId = this.nextId();
-        }
-        bulkRequest.payload = rfqRequestArray;
+    //     for (var rfqRequest of rfqRequestArray) {
+    //         rfqRequest.requestId = this.nextId();
+    //     }
+    //     bulkRequest.payload = rfqRequestArray;
 
-        debugL2('submitting rfq  bulk request ' + JSON.stringify(bulkRequest));
+    //     debugL2('submitting rfq  bulk request ' + JSON.stringify(bulkRequest));
 
-        let result = await this.postWithValidate("/rfq/v1/bulk", bulkRequest, validateResponse);
-        return result;
-    }
+    //     let result = await this.postWithValidate("/rfq/v1/bulk", bulkRequest, validateResponse);
+    //     return result;
+    // }
 
-    public async createRFQBulkResponse(rfqResponseArray: any[], validateResponse: boolean = false) {
-        const bulkRequest = { "messageType": "RFQ_RESPOND_REQUEST", "payload": [] };
-        for (var rfqRequest of rfqResponseArray) {
-            rfqRequest.requestId = this.nextId();
-        }
-        bulkRequest.payload = rfqResponseArray;
+    // public async createRFQBulkResponse(rfqResponseArray: any[], validateResponse: boolean = false) {
+    //     const bulkRequest = { "messageType": "RFQ_RESPOND_REQUEST", "payload": [] };
+    //     for (var rfqRequest of rfqResponseArray) {
+    //         rfqRequest.requestId = this.nextId();
+    //     }
+    //     bulkRequest.payload = rfqResponseArray;
 
-        debugL2('submitting rfq  bulk response ' + JSON.stringify(bulkRequest));
+    //     debugL2('submitting rfq  bulk response ' + JSON.stringify(bulkRequest));
 
-        let result = await this.postWithValidate("/rfq/v1/bulk", bulkRequest, validateResponse);
-        return result;
-    }
+    //     let result = await this.postWithValidate("/rfq/v1/bulk", bulkRequest, validateResponse);
+    //     return result;
+    // }
 
 
     public async respondRFQ(rfqResponse: any, validateResponse: boolean = false) {
@@ -805,50 +819,42 @@ export class TraderSession extends Session {
 
     public async performSingleSearch(search) {
         debugL2('DOB Single search ' + JSON.stringify(search));
-        let result = await this.client
-            .post<any>(getTraderApiUrl('single-search'), search)
-            .then((result: AxiosResponse<any>) => {
-                debugL2('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: any) => {
-                debugL2('error:\n' + JSON.stringify(err.response.data));
-                return err.response.data;
-            });
-
-        return result;
+        try {
+            const response = await this.client.post(getTraderApiUrl('single-search'), search);
+            const data = await response.json();
+            debugL2('response:\n' + JSON.stringify(data));
+            return data;
+        } catch (err: any) {
+            debugL2('error:\n' + JSON.stringify(err.response.data));
+            return err.response.data;
+        }
     }
 
     public async performHighlevelSearch(search) {
         debugL2('DOB Highlevel search ' + JSON.stringify(search));
-        let result = await this.client
-            .post<any>(getTraderApiUrl('/dob/search/highlevel'), search)
-            .then((result: AxiosResponse<any>) => {
-                debugL2('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: any) => {
-                debugL2('error:\n' + JSON.stringify(err.response.data));
-                return err.response.data;
-            });
-
-        return result;
+        try {
+            const response = await this.client.post(getTraderApiUrl('/dob/search/highlevel'), search);
+            const data = await response.json();
+            debugL2('response:\n' + JSON.stringify(data));
+            return data;
+        } catch (err: any) {
+            debugL2('error:\n' + JSON.stringify(err.response.data));
+            return err.response.data;
+        }
     }
 
     public async performDynamicSearch(search) {
         debugL2('DOB Dynamic search ' + JSON.stringify(search));
-        let result = await this.client
-            .post<any>(getTraderApiUrl('/dob/search/dynamic'), search)
-            .then((result: AxiosResponse<any>) => {
-                debugL2('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: any) => {
-                debugL2('error:\n' + JSON.stringify(err.response.data));
-                return err.response.data;
-            });
-
-        return result;
+        try {
+            const response = await this.client.post(getTraderApiUrl('/dob/search/dynamic'), search);
+            const data = await response.json();
+            debugL2('response:\n' + JSON.stringify(data));
+            return data;
+        }
+        catch (err: any) {
+            debugL2('error:\n' + JSON.stringify(err.response.data));
+            return err.response.data;
+        }
     }
 
     public async validateSearchSocketMessage(message: any, key?: string) {
@@ -942,13 +948,13 @@ export class TraderSession extends Session {
     public async assetsQuerySelfCare(validateResponse: boolean = false) {
         debugL2("get self care assets query balances.");
 
-        return await this.getWithValidate("/corda/v1/assets", null, validateResponse);
+        return await this.getWithValidate("/corda/v1/assets", undefined, validateResponse);
     }
 
     // Query the existing RFQs
     public async queryRFQ(validateResponse: boolean = false) { //TODO:rename function
         debugL1("get exisiting RFQs.");
-        return await this.getWithValidate("/rfq/v1/rfqs", null, validateResponse);
+        return await this.getWithValidate("/rfq/v1/rfqs", undefined, validateResponse);
     }
 
     public async queryRFQHistory(request: any, validateResponse: boolean = false) {
@@ -964,7 +970,7 @@ export class TraderSession extends Session {
     public async transactionsQuerySelfCare(validateResponse: boolean = false) {
         debugL2("get self care transactions.");
 
-        return await this.getWithValidate("/corda/v1/transactions", null, validateResponse);
+        return await this.getWithValidate("/corda/v1/transactions", undefined, validateResponse);
     }
 
     public async getPositions(firmId: string, validateResponse: boolean = false) {

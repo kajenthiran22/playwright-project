@@ -1,57 +1,70 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { request, APIResponse, APIRequestContext } from '@playwright/test';
 import { Session } from './session';
 
 const debugL3 = require('debug')('fw-L3-rest-client');
 const debugL2 = require('debug')('fw-L2-rest-client');
 const debugL1 = require('debug')('fw-L1-rest-client');
+
 export class RestClient {
 
-    private api: AxiosInstance;
-    private config: AxiosRequestConfig;
+    private apiContext!: APIRequestContext;
+    private config: any;
 
-    public constructor (session: Session) {
-        this.config = session.getRequestConfig();
-        this.api = axios.create(this.config);
-        this.api.interceptors.request.use((param: AxiosRequestConfig) => ({
-            ...param
-        }));
-        this.api.interceptors.response.use((param: AxiosResponse) => ({
-            ...param
-        }));
+    private constructor(apiContext: APIRequestContext, config: any) {
+        this.apiContext = apiContext;
+        this.config = config;
     }
 
-    public getUri (): string {
-        return this.api.getUri(this.config);
+    public static async create(session: Session): Promise<RestClient> {
+        const config = session.getRequestConfig();
+        const apiContext = await request.newContext(config);
+        return new RestClient(apiContext, config);
+    }    
+
+    public getUri(): string {
+        // Playwright does not have getUri; return baseURL if present
+        return this.config.baseURL || '';
     }
 
-    public request<T, R = AxiosResponse<T>> (): Promise<R> {
-        return this.api.request(this.config);
+    public async request(url: string, options?: any): Promise<APIResponse> {
+        debugL1('request ' + url);
+        return await this.apiContext.fetch(url, { ...this.config, ...options });
     }
 
-    public get<T, R = AxiosResponse<T>> (url: string): Promise<R> {
-        return this.api.get(url, this.config);
+    public async get(url: string): Promise<APIResponse> {
+        debugL1('get ' + url);
+        return await this.apiContext.get(url, this.config);
     }
 
-    public delete<T, R = AxiosResponse<T>> (url: string, data?: any): Promise<R> {
-        this.config.data = data;
-        return this.api.delete(url, this.config);
+    public async delete(url: string, data?: any): Promise<APIResponse> {
+        debugL1('delete ' + url);
+        return await this.apiContext.delete(url, { ...this.config, data });
     }
 
-    public head<T, R = AxiosResponse<T>> (url: string): Promise<R> {
-        return this.api.head(url, this.config);
+    public async head(url: string): Promise<APIResponse> {
+        debugL1('head ' + url);
+        return await this.apiContext.head(url, this.config);
     }
 
-    public post<T, R = AxiosResponse<T>> (url: string, data?: any): Promise<R> {
+    public async post(url: string, data?: any): Promise<APIResponse> {
         debugL1('post ' + url);
         debugL3('payload:\n' + JSON.stringify(data));
-        return this.api.post(url, data, this.config);
+        return await this.apiContext.post(url, { ...this.config, data });
     }
 
-    public put<T, R = AxiosResponse<T>> (url: string, data?: any): Promise<R> {
-        return this.api.put(url, data, this.config);
+    public async put(url: string, data?: any): Promise<APIResponse> {
+        debugL1('put ' + url);
+        return await this.apiContext.put(url, { ...this.config, data });
     }
 
-    public patch<T, R = AxiosResponse<T>> (url: string, data?: any): Promise<R> {
-        return this.api.patch(url, data, this.config);
+    public async patch(url: string, data?: any): Promise<APIResponse> {
+        debugL1('patch ' + url);
+        return await this.apiContext.patch(url, { ...this.config, data });
+    }
+
+    public async dispose() {
+        await this.apiContext.dispose();
     }
 }
+
+    

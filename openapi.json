@@ -1,0 +1,2303 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "P8 API Documentation",
+    "description": "## API\n\nThe API of the trading platform is a set of REST and web socket based services provided via two service end-points, one for administrative API calls, and one for business functionality for regular users.\n\n### Administrative API\n\nThe administrative API is available at `https://<base-admin-uri>/api/v1/*`. API calls on this end-point should only be invoked with credentials with administrarive privileges.\n\n### Trading API\nThe trading API is available at `https://<base-uri>/api/v1/*`. API calls on this end-point should be invoked with credentials of a regular trading user.\n\n## Authentication\n\nAll invocations of the REST API (including both administrative and trading) must provide user credentials in the form of a bearer JWT token in the `Authorization` header.\n\nThe only exception to this requirement is the call to the `https://<base-uri>/api/v1/get-token` service, which in turn issues an authorization token when valid user credentials are presented.\n\n> Note that the service end-point to use for authentication is based on `http://<base-uri>/` for both administrative and trading users. Invoking using the `<base-admin-uri>` would result in failures.\n\n### Request\n```\n{\n  \"username\": <username of the user>,\n  \"password\": <password of the user>,\n  \"type\": <type of the user, must be ADMIN or TRADER>\n}\n```\n\n### Response\n```\n{\n  \"accessToken\": <access privelege token>,\n  \"idToken\": <authorization token, which should be used as the bearer token in all subsequent calls>\n}\n```\n\nIn addition, the same service call can be used for changing user's passwords (either changing the temporary password assigned when the user account was created before performing the first login, or when a subsequent password change is required). In either case the new password should be specified in the `newPassword` attribute in the request body in addition to current credentials.\n\n### Request\n```\n{\n  \"username\": <username of the user>,\n  \"password\": <current password of the user>,\n  \"type\": <type of the user, must be ADMIN or TRADER>,\n  \"newPassword\": <new password to be set for the user>\n}\n```\n",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/sessions/v1/verify/": {
+      "summary": "OTP verify",
+      "description": "Verify OTP",
+      "post": {
+        "requestBody": {
+          "description": "OTP validate request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OTPRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Sessions Admin API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPResponse"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "User side error"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            },
+            "description": "User side error"
+          }
+        },
+        "operationId": "OTPVerifier",
+        "summary": "OTP verify",
+        "description": "Verify OTP by a given verify criteria"
+      }
+    },
+    "/api/v1/order": {
+      "summary": "Order management API",
+      "description": "Rest end point to cancel an existing order",
+      "post": {
+        "requestBody": {
+          "description": "New order request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionReport"
+                }
+              }
+            },
+            "description": "Order accepted by the gateway"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Failure response"
+          },
+          "401": {
+            "description": "user has no permission to submit new orders"
+          },
+          "500": {
+            "description": "Server error. Client needs to retry later"
+          }
+        },
+        "operationId": "onNewOrder",
+        "summary": "New order request",
+        "description": "New order request"
+      },
+      "delete": {
+        "requestBody": {
+          "description": "Cancel order request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionReport"
+                }
+              }
+            },
+            "description": "Cancel order accepted by the gateway"
+          },
+          "400": {
+            "description": "Validation error on the request"
+          },
+          "401": {
+            "description": "The user does not have permission to cancel this order"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "The given order is not found"
+          },
+          "500": {
+            "description": "internal error. Retry later"
+          }
+        },
+        "operationId": "onCancelOrder",
+        "summary": "Order cancel",
+        "description": "Order cancellation request "
+      }
+    },
+    "/api/v1/trade": {
+      "summary": "Trade management API",
+      "description": "Rest end point to cancel an existing trade",
+      "delete": {
+        "requestBody": {
+          "description": "Cancel trade request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelTrade"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelTradeAck"
+                }
+              }
+            },
+            "description": "Cancel trade accepted by the gateway"
+          },
+          "400": {
+            "description": "Validation error on the request"
+          },
+          "401": {
+            "description": "The user does not have permission to cancel this trade"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "The given order is not found"
+          },
+          "500": {
+            "description": "internal error. Retry later"
+          }
+        },
+        "operationId": "onCancelTrade",
+        "summary": "Trade cancel",
+        "description": "Trade cancellation request "
+      }
+    },
+    "/api/v1/orderStatus/{userId}": {
+      "summary": "api for order history service",
+      "description": "Rest end point to download order history",
+      "get": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "user who is requesting order history",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "symbol",
+            "description": "query symbol, if not specified all symbols will be delivered",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false
+          },
+          {
+            "name": "activeOrders",
+            "description": "order type active/inactive. default value is active",
+            "schema": {
+              "type": "boolean"
+            },
+            "in": "query",
+            "required": false
+          },
+          {
+            "name": "orderId",
+            "description": "order id, if not specified no any filter is applied for order id",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false
+          },
+          {
+            "name": "historyLimit",
+            "description": "history limit, if not specified full list will be sent. If you need only latest one, need to set 1 for this field. Mentioned count will be sent from the head always",
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "required": false
+          },
+          {
+            "name": "limit",
+            "description": "limit value of keys. default value is 500",
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExecutionReports"
+                  }
+                }
+              }
+            },
+            "description": "Expected response to a valid request"
+          },
+          "500": {
+            "description": "error in request"
+          }
+        },
+        "operationId": "queryOrderStatus"
+      }
+    },
+    "/api/v1/ownTrades/{userId}": {
+      "summary": "api for trade execution report history service",
+      "description": "Rest end point to download trade execution reports",
+      "get": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "description": "user who is requesting order history",
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "required": true
+          },
+          {
+            "name": "symbol",
+            "description": "query symbol, if not specified all symbols will be delivered",
+            "schema": {
+              "type": "string"
+            },
+            "in": "query",
+            "required": false
+          },
+          {
+            "name": "limit",
+            "description": "limit value of keys. default value is 500",
+            "schema": {
+              "type": "integer"
+            },
+            "in": "query",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExecutionReport"
+                  }
+                }
+              }
+            },
+            "description": "Expected response to a valid request"
+          },
+          "500": {
+            "description": "error in request"
+          }
+        },
+        "operationId": "queryTradeHistory"
+      }
+    },
+    "/api/v1/indication/response": {
+      "post": {
+        "requestBody": {
+          "description": "Indication response message",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndicationResponse"
+              },
+              "examples": {
+                "IndicationResponseExample": {
+                  "value": {
+                    "requestId": "req123",
+                    "symbol": "BTC",
+                    "side": "SELL",
+                    "price": "10.25",
+                    "size": "100",
+                    "userId": "trader01"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "examples": {
+                  "IndicationResponseAccept": {
+                    "value": {
+                      "status": "OK"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Indication response accepted by the system."
+          },
+          "401": {
+            "description": "Not authorized to perform this action"
+          }
+        },
+        "operationId": "onIndicationResponse",
+        "summary": "Submit indication response to the system",
+        "description": "Submit indication response to the system"
+      }
+    },
+    "/api/v1/indication/mass-cancel": {
+      "post": {
+        "requestBody": {
+          "description": "Indication mass cancel request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndicationMassCancelRequest"
+              },
+              "examples": {
+                "IndicationMassCancelRequestExample": {
+                  "value": {
+                    "requestId": "reqI123",
+                    "firmId": "firm01",
+                    "reason": "Cancelling firm quotes"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                },
+                "examples": {
+                  "IndicationMassCancelResponseAck": {
+                    "value": {
+                      "status": "OK"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Indication mass cancel request accepted by the system."
+          },
+          "401": {
+            "description": "Not authorized to perform this action"
+          }
+        },
+        "operationId": "onIndicationMassCancelRequest",
+        "summary": "Submit indication mass cancel to the system",
+        "description": "Submit indication mass cancel to the system"
+      }
+    },
+    "/api/v1/indication": {
+      "summary": "Indication Management",
+      "description": "Indication Management",
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndicationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Success response"
+          },
+          "401": {
+            "description": "User is not authorized to perform this action"
+          }
+        },
+        "operationId": "onIndicationRequest",
+        "summary": "Submit new indication to the platform",
+        "description": "Indication Management"
+      },
+      "delete": {
+        "requestBody": {
+          "description": "Indication cancel request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndicationCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Successfull response"
+          },
+          "401": {
+            "description": "Not authorized to cancel indication."
+          }
+        },
+        "operationId": "onCancelIndication",
+        "summary": "Cancel existing indication",
+        "description": "Cancel an exisiting indication"
+      }
+    },
+    "/api/v1/indication/execution-response": {
+      "summary": "Execution request confirmation",
+      "description": "Execution request confirmation",
+      "post": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IndicationExecutionResponse"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Execution response accepted by the platform"
+          },
+          "401": {
+            "description": "User doesn't have priviledge to perform this action"
+          }
+        },
+        "operationId": "onExecutionResponse",
+        "summary": "Response to execution request",
+        "description": "Dealer's response to execution request."
+      }
+    },
+    "/api/v1/position/admin/deposit": {
+      "summary": "Deposit funds to an account",
+      "description": "Deposit funds to an account",
+      "post": {
+        "requestBody": {
+          "description": "Deposit request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminDepositRequest"
+              },
+              "examples": {
+                "AdminDepositExample": {
+                  "value": {
+                    "requestId": "req1",
+                    "accountId": "acc-01",
+                    "symbol": "BTC",
+                    "amount": "1.20"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response."
+          },
+          "403": {
+            "description": "User doesn't have required permission to perform this action"
+          },
+          "500": {
+            "description": "System error. User needs to retry later."
+          }
+        },
+        "operationId": "onAdminPositionDeposit",
+        "summary": "Deposit funds to an account",
+        "description": "Deposit funds to an account"
+      }
+    },
+    "/api/v1/position/admin/withdraw": {
+      "summary": "Withdraw funds from an account",
+      "description": "Withdraw funds from an account",
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminWithdrawRequest"
+              },
+              "examples": {
+                "AdminWithdrawExample": {
+                  "value": {
+                    "requestId": "req1",
+                    "accountId": "acc-01",
+                    "symbol": "BTC",
+                    "amount": "1.20"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "403": {
+            "description": "User doesn't have required permission to perform this action"
+          },
+          "500": {
+            "description": "System error. User needs to retry later"
+          }
+        },
+        "operationId": "onAdminPositionWithdraw",
+        "summary": "Withdraw funds from an account",
+        "description": "Withdraw funds from an account"
+      }
+    },
+    "/api/v1/position/admin/balance/{accountId}": {
+      "summary": "Account balances",
+      "description": "Account balances",
+      "get": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "403": {
+            "description": "User is not allowed to perform this action"
+          },
+          "500": {
+            "description": "Server error. Client needs to retry later"
+          }
+        },
+        "operationId": "onAdminPositionBalance",
+        "summary": "Get positions for an account",
+        "description": "Get positions for an account"
+      },
+      "parameters": [
+        {
+          "name": "accountId",
+          "description": "Account identifier",
+          "schema": {
+            "type": "string"
+          },
+          "in": "path",
+          "required": true
+        }
+      ]
+    },
+    "/api/v1/position/admin/adjustment": {
+      "summary": "Adjust position balance",
+      "description": "Adjust position balance",
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminPositionAdjustmentRequest"
+              },
+              "examples": {
+                "AdminPositionAdjustmentExample": {
+                  "value": {
+                    "requestId": "req1",
+                    "accountId": "acc-01",
+                    "symbol": "BTC",
+                    "amount": "1.20",
+                    "type": "BALANCE"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "403": {
+            "description": "User doesn't have required permission to perform this action"
+          },
+          "500": {
+            "description": "System error. User has to retry later"
+          }
+        },
+        "operationId": "onAdminPositionAdjustment",
+        "summary": "Adjust position balance",
+        "description": "Adjust position balance"
+      }
+    },
+    "/api/v1/position/trader/balance": {
+      "summary": "Get position balance",
+      "description": "Get position balance of requested user",
+      "get": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "500": {
+            "description": "System error. User needs to retry later"
+          }
+        },
+        "operationId": "onTraderPositionBalance",
+        "summary": "Get position balance for the user",
+        "description": "Get position balance for the requested user"
+      }
+    },
+    "/api/v1/order/mass-cancel": {
+      "summary": "Order management API",
+      "description": "Rest end point to cancel all orders per instrument",
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderMassCancelRequest"
+              },
+              "examples": {
+                "CancelMassOrderRequest": {
+                  "value": {
+                    "marketId": "market1",
+                    "clOrderId": "123",
+                    "symbol": "BTC/USDT",
+                    "side": "S"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "description": "Mass order cancel request accepted by the system."
+          },
+          "400": {
+            "description": "Validation error of the request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "operationId": "onOrderMassCancel",
+        "summary": "Submit mass order cancel to the system",
+        "description": "Submit mass order cancel to the system"
+      }
+    },
+    "/api/v1/position/trader/transfer": {
+      "summary": "Transfer funds across accounts",
+      "description": "Transfer funds across accounts",
+      "post": {
+        "requestBody": {
+          "description": "Fund transfer request body",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TraderTransferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Successful response"
+          },
+          "500": {
+            "description": "System error. User is required to retry later"
+          }
+        },
+        "operationId": "onTraderFundTransfer",
+        "summary": "Transfer funds across accounts",
+        "description": "Transfer funds across accounts"
+      }
+    },
+    "/api/v1/futures/order": {
+      "post": {
+        "requestBody": {
+          "description": "Futures new order request ",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FuturesNewOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionReport"
+                }
+              }
+            },
+            "description": "Successful"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "unauthorized"
+          },
+          "500": {
+            "description": "Server order"
+          }
+        },
+        "operationId": "onFuturesNewOrder",
+        "summary": "Futures new order request",
+        "description": ""
+      },
+      "delete": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FuturesCancelOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "tags": [
+          "Order Manager API"
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutionReport"
+                }
+              }
+            },
+            "description": "Ok"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        },
+        "operationId": "onFuturesCancelOrder",
+        "summary": "Futures cancel order request"
+      }
+    },
+    "/api/v1/order/admin/mass-cancel": {
+      "post": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMassCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Ok"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Response"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "operationId": "onAdminOrderMassCancel"
+      }
+    },
+    "/api/v1/futures/leverage": {
+      "summary": "Leverage will be set per position per trader.",
+      "description": "Leverage will be set per position per trader. \nTrader > Symbol > Leverage",
+      "post": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "requestBody": {
+          "description": "Request body is SetLeverage",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FuturesSetLeverage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ok"
+          },
+          "500": {
+            "description": "Internal Server error"
+          }
+        },
+        "operationId": "onFuturesSetLeverage",
+        "summary": "set Leverage",
+        "description": "set Leverage per position per trader"
+      }
+    },
+    "/api/v1/futures/margin-mode": {
+      "summary": "Set margin mode",
+      "description": "Margin mode set to 0 for CROSS and 1 for ISOLATED.",
+      "post": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "requestBody": {
+          "description": "Request body is SetMarginMode",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FuturesSetMarginMode"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Ok"
+          },
+          "500": {
+            "description": "Server error. Client needs to retry later"
+          }
+        },
+        "operationId": "onFuturesSetMarginMode",
+        "summary": "set Margin mode",
+        "description": "Set margin mode"
+      }
+    },
+    "/api/v1/futures/margin": {
+      "summary": "Change futures margin",
+      "description": "Change existing margin of a crypto future position",
+      "post": {
+        "tags": [
+          "Order Manager API"
+        ],
+        "requestBody": {
+          "description": "Request body for change margin",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FuturesChangeMargin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response"
+          },
+          "500": {
+            "description": "Internal Server error"
+          }
+        },
+        "operationId": "onFuturesChangeMargin",
+        "summary": "Change margin amount",
+        "description": "Change margin amount of a crypto futures position"
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "api-auth": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header"
+      }
+    },
+    "schemas": {
+      "DevInfo": {
+        "description": "Device information definition",
+        "type": "object",
+        "properties": {
+          "platform": {
+            "type": "string"
+          },
+          "make": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "appVersion": {
+            "type": "string"
+          },
+          "language": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        }
+      },
+      "OTPRequest": {
+        "description": "OTP request definition",
+        "required": [
+          "otp"
+        ],
+        "type": "object",
+        "properties": {
+          "otp": {
+            "type": "string"
+          },
+          "rememberDevice": {
+            "type": "boolean"
+          },
+          "deviceId": {
+            "type": "string"
+          },
+          "deviceInfo": {
+            "$ref": "#/components/schemas/DevInfo"
+          }
+        }
+      },
+      "VisitorInfo": {
+        "description": "Visitor information definition",
+        "required": [
+          "visitorId",
+          "expiresOn"
+        ],
+        "type": "object",
+        "properties": {
+          "visitorId": {
+            "type": "string"
+          },
+          "expiresOn": {
+            "type": "number"
+          }
+        }
+      },
+      "OTPResponse": {
+        "description": "OTP response definition",
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "OK"
+            ],
+            "type": "string"
+          },
+          "visitorInfo": {
+            "$ref": "#/components/schemas/VisitorInfo"
+          }
+        }
+      },
+      "Error": {
+        "required": [
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "message": "internal server error occured"
+        }
+      },
+      "NewOrder": {
+        "description": "New order message definition",
+        "required": [
+          "marketId",
+          "symbol",
+          "side",
+          "orderType",
+          "orderQty",
+          "clOrderId",
+          "price",
+          "tif",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "description": "Market identification",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identification ",
+            "type": "string"
+          },
+          "side": {
+            "description": "Order side",
+            "enum": [
+              "B",
+              "S"
+            ],
+            "type": "string"
+          },
+          "tif": {
+            "description": "Time in Force value",
+            "enum": [
+              "GTC",
+              "FOK",
+              "IOC",
+              "GFA"
+            ],
+            "type": "string"
+          },
+          "orderType": {
+            "description": "Order type",
+            "enum": [
+              "MKT",
+              "LMT",
+              "STOP_LIMIT",
+              "STOP_MARKET"
+            ],
+            "type": "string"
+          },
+          "orderQty": {
+            "description": "Order quantity. Must be an integer",
+            "type": "string"
+          },
+          "price": {
+            "description": "Order price. This should be an integer with implicit decimal places which is defined per instrument",
+            "type": "string"
+          },
+          "clOrderId": {
+            "description": "Client order id. This should be a unique string of < 15 alpha numeric characters",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Userid given by exchange. The order is owned by this user",
+            "type": "string"
+          },
+          "flags": {
+            "description": "Order flags",
+            "type": "array",
+            "items": {
+              "enum": [
+                "TAKE_PROFIT",
+                "STOP_LOSS"
+              ],
+              "type": "string"
+            }
+          },
+          "stopPrice": {
+            "description": "Stop Price",
+            "type": "string"
+          }
+        },
+        "example": {
+          "marketId": "Market1",
+          "symbol": "BTC/USDT",
+          "side": "S",
+          "tif": "GFA",
+          "orderType": "LIMIT",
+          "orderQty": "1000",
+          "price": "12.13",
+          "clOrderId": "some text",
+          "userId": "use34",
+          "flags": [
+            "TAKE_PROFIT",
+            "STOP_LOSS"
+          ],
+          "stopPrice": "10.00"
+        }
+      },
+      "ExecutionReport": {
+        "description": "Order acknowledgment  ",
+        "required": [
+          "symbol",
+          "clOrderId",
+          "orderId",
+          "price",
+          "leavesQty",
+          "orderQty",
+          "orderStatus",
+          "orderType",
+          "side",
+          "tif",
+          "userId",
+          "execType",
+          "execId"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "description": "Instrument identification",
+            "type": "string"
+          },
+          "side": {
+            "description": "Order side",
+            "enum": [
+              "B",
+              "S"
+            ],
+            "type": "string"
+          },
+          "tif": {
+            "description": "Time in Force value.",
+            "enum": [
+              "GTC",
+              "FOK",
+              "IOC",
+              "GFA"
+            ],
+            "type": "string"
+          },
+          "orderType": {
+            "description": "Order type",
+            "enum": [
+              "MKT",
+              "LMT",
+              "STOP_LIMIT",
+              "STOP_MARKET"
+            ],
+            "type": "string"
+          },
+          "orderStatus": {
+            "description": "Order Status ",
+            "enum": [
+              "NEW",
+              "PFILLED",
+              "FILLED",
+              "CANCELED",
+              "EXPIRED"
+            ],
+            "type": "string"
+          },
+          "orderQty": {
+            "description": "Order quantity",
+            "type": "string"
+          },
+          "leavesQty": {
+            "description": "Currently open qty of the order",
+            "type": "string"
+          },
+          "price": {
+            "description": "Order price. This should be an integer with implicit decimal places which is defined per instrument",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Userid given by exchange. The order is owned by this user",
+            "type": "string"
+          },
+          "orderId": {
+            "description": "Unique identifier assigned ot the order by the Matching Engine",
+            "type": "string"
+          },
+          "clOrderId": {
+            "description": "Client order id. This should be a unique string of < 15 alpha numeric characters",
+            "type": "string"
+          },
+          "origClOrderId": {
+            "description": "Original client order id of the order affected (if it is different to the clOrderId)",
+            "type": "string"
+          },
+          "execType": {
+            "description": "The reason for this execution report generation",
+            "enum": [
+              "NEW",
+              "CANCELED",
+              "EXPIRED",
+              "REJECTED",
+              "PENDING_NEW",
+              "TRADE",
+              "PENDING_CANCEL",
+              "REPLACED"
+            ],
+            "type": "string"
+          },
+          "execId": {
+            "description": "unique id for this execution report",
+            "type": "string"
+          },
+          "rejectReason": {
+            "description": "Why this order was rejected, expired or cancelled",
+            "type": "string"
+          },
+          "execSize": {
+            "description": "Executed Size. Only filled when execType='F'",
+            "type": "string"
+          },
+          "cumExecSize": {
+            "description": "Cumulative executed Size",
+            "type": "string"
+          },
+          "execPrice": {
+            "description": "Executed Price. Only populated when execType='F'",
+            "type": "string"
+          },
+          "stopPrice": {
+            "description": "Stop Price"
+          }
+        },
+        "example": {
+          "clOrderId": "CV123",
+          "orderId": "29",
+          "price": "12.13",
+          "orderQty": "1000",
+          "leavesQty": "1000",
+          "execSize": "0",
+          "execPrice": "0",
+          "CumExecSize": "0",
+          "orderStatus": "NEW",
+          "tif": "DAY",
+          "orderType": "LMT",
+          "side": "S",
+          "userId": "tr001",
+          "symbol": "INS01",
+          "execId": 41,
+          "execType": "NEW"
+        }
+      },
+      "schemas-Error": {
+        "title": "Root Type for Error",
+        "description": "Generic error response message",
+        "type": "object",
+        "properties": {
+          "rejectReason": {
+            "type": "string"
+          }
+        },
+        "example": {
+          "rejectReason": "Invalid request"
+        }
+      },
+      "Response": {
+        "title": "Root Type for genericMessage",
+        "description": "This message is used to convey reasons for rejections and other exception conditions",
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "description": "client order id /Request id of the request message. For order message this will contain the client order id",
+            "type": "string"
+          },
+          "error": {
+            "$ref": "#/components/schemas/schemas-Error",
+            "description": "Error infomation"
+          },
+          "status": {
+            "description": "Status of the request.",
+            "enum": [
+              "OK",
+              "FAILED"
+            ],
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "CR232-123122",
+          "status": "OK"
+        }
+      },
+      "CancelOrder": {
+        "description": "Order cancel request",
+        "required": [
+          "marketId",
+          "symbol",
+          "userId",
+          "clOrderId"
+        ],
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "description": "Market identification",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identification",
+            "type": "string"
+          },
+          "orderId": {
+            "description": "Order id of the order to be cancelled. Either Order Id or the original client order id can be used for cancellation. if orderId is present, the original client orderId is ignore",
+            "type": "string"
+          },
+          "userId": {
+            "description": "User identification of the owner of the order",
+            "type": "string"
+          },
+          "clOrderId": {
+            "description": "New client order id ",
+            "type": "string"
+          },
+          "origClOrderID": {
+            "description": "Original client order id of the order. This is only used when orderId is not present",
+            "type": "string"
+          }
+        },
+        "example": {
+          "clOrderId": "CV124",
+          "symbol": "ibm",
+          "orderId": 6,
+          "userId": "use34"
+        }
+      },
+      "CancelTrade": {
+        "description": "Trade cancel request",
+        "required": [
+          "symbol",
+          "userId",
+          "tradeId"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "description": "Instrument identification",
+            "type": "string"
+          },
+          "tradeId": {
+            "description": "Trade id of the trade to be cancelled.",
+            "type": "string"
+          },
+          "userId": {
+            "description": "User identification of the owner of the order",
+            "type": "string"
+          }
+        },
+        "example": {
+          "symbol": "ibm",
+          "tradeId": 6,
+          "userId": "use34"
+        }
+      },
+      "CancelTradeAck": {
+        "description": "Trade cancel request",
+        "required": [
+          "symbol",
+          "tradeId"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "description": "Instrument identification",
+            "type": "string"
+          },
+          "tradeId": {
+            "description": "Trade id of the trade to be cancelled.",
+            "type": "string"
+          },
+          "dummyField": {
+            "description": "Some fields that may need to send",
+            "type": "string"
+          }
+        },
+        "example": {
+          "symbol": "ibm",
+          "tradeId": 6,
+          "dummyField": "Success"
+        }
+      },
+      "ExecutionReports": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ExecutionReport"
+        }
+      },
+      "IndicationResponse": {
+        "description": "Indication response definition",
+        "required": [
+          "requestId",
+          "quoteId",
+          "marketId",
+          "symbol",
+          "side",
+          "price",
+          "size",
+          "userId"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "description": "User's unique identifier of the request",
+            "type": "string"
+          },
+          "quoteId": {
+            "description": "System quote identifier",
+            "type": "string"
+          },
+          "marketId": {
+            "description": "Market identification",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identification ",
+            "type": "string"
+          },
+          "side": {
+            "description": "Execution side",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "type": "string"
+          },
+          "price": {
+            "description": "Execution price",
+            "type": "string"
+          },
+          "size": {
+            "description": "Execution size",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Owner of the request",
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "CV123",
+          "quoteId": "ACFR-DSCT-FSGE",
+          "symbol": "ibm",
+          "side": "BUY",
+          "price": "12.13",
+          "size": "1000",
+          "userId": "trader01"
+        }
+      },
+      "IndicationMassCancelRequest": {
+        "description": "Indication mass cancel request definition",
+        "required": [
+          "requestId",
+          "reason",
+          "massCancelType"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "description": "User's unique identifier of the request",
+            "type": "string"
+          },
+          "firmId": {
+            "description": "Firm identifier of the mass cancel to be applied",
+            "type": "string"
+          },
+          "submitterId": {
+            "description": "Submitter identifier of the mass cancel to be applied",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Cancel reason",
+            "type": "string"
+          },
+          "massCancelType": {
+            "description": "Cancellation type.",
+            "enum": [
+              "FIRM",
+              "SUBMITTER"
+            ],
+            "type": "string"
+          },
+          "marketId": {
+            "description": "Market identifier of the mass cancel to be applied",
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "CV123",
+          "massCancelType": "FIRM",
+          "firmId": "Firm1",
+          "reason": "Cancelling quotes"
+        }
+      },
+      "IndicationRequest": {
+        "title": "Root Type for IndicationRequest",
+        "description": "Indication request definition",
+        "required": [
+          "size",
+          "price",
+          "clientQuoteId",
+          "side",
+          "symbol",
+          "quoteType",
+          "userId",
+          "marketId"
+        ],
+        "type": "object",
+        "properties": {
+          "clientQuoteId": {
+            "description": "Client request identifier",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identifier",
+            "type": "string"
+          },
+          "side": {
+            "description": "Side of the indication",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "type": "string"
+          },
+          "price": {
+            "description": "Price of the indication",
+            "type": "string"
+          },
+          "size": {
+            "description": "Size of the indication",
+            "type": "string"
+          },
+          "userId": {
+            "description": "Owner of the indication",
+            "type": "string"
+          },
+          "marketId": {
+            "description": "Market identifier",
+            "type": "string"
+          },
+          "quoteType": {
+            "description": "Type of the indication",
+            "enum": [
+              "AXE",
+              "INVENTORY",
+              "RUN"
+            ],
+            "type": "string"
+          }
+        },
+        "example": {
+          "clientQuoteId": "CV123",
+          "quoteType": "AXE",
+          "symbol": "ibm",
+          "side": "BUY",
+          "price": "12.13",
+          "size": "1000",
+          "userId": "trader01",
+          "marketId": "COB"
+        }
+      },
+      "IndicationCancelRequest": {
+        "title": "Root Type for IndicationCancelRequest",
+        "description": "Request message to cancel a single indication",
+        "required": [
+          "quoteId",
+          "requestId",
+          "symbol"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "description": "Client request reference",
+            "type": "string"
+          },
+          "quoteId": {
+            "description": "System quote identifier",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Reason for cancellation",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identification",
+            "type": "string"
+          },
+          "marketId": {
+            "description": "Market identification",
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "req1",
+          "quoteId": "ACFR-DSCT-FSGE"
+        }
+      },
+      "IndicationExecutionResponse": {
+        "title": "Root Type for IndicationExecutionResponse",
+        "description": "Dealer's response for execution request",
+        "required": [
+          "quoteResponseId",
+          "requestId",
+          "symbol",
+          "status",
+          "side"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "description": "Client identifier of the request",
+            "type": "string"
+          },
+          "quoteResponseId": {
+            "description": "Identifier of Quote Response the dealer is responding to.",
+            "type": "string"
+          },
+          "marketId": {
+            "description": "Market identification",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identifier",
+            "type": "string"
+          },
+          "status": {
+            "description": "Execution response status. ACCEPT or REJECT ",
+            "enum": [
+              "ACCEPT",
+              "REJECT"
+            ],
+            "type": "string"
+          },
+          "side": {
+            "description": "Customer’s side of the trade",
+            "enum": [
+              "BUY",
+              "SELL"
+            ],
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "req1",
+          "quoteResponseId": "ACFR-DSCT-FSGE",
+          "marketId": "COB",
+          "symbol": "inst1",
+          "side": "BUY",
+          "status": "ACCEPT"
+        }
+      },
+      "AdminDepositRequest": {
+        "title": "Root Type for AdminDepositRequest",
+        "description": "Request message used by admin to deposit funds to an account",
+        "required": [
+          "accountId",
+          "amount",
+          "symbol",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "description": "Account identifier",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identifier",
+            "type": "string"
+          },
+          "amount": {
+            "description": "Deposit amount",
+            "type": "string"
+          },
+          "requestId": {
+            "description": "Request identifier",
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "req1",
+          "accountId": "acc-01",
+          "symbol": "BTC",
+          "amount": "1.20"
+        }
+      },
+      "AdminWithdrawRequest": {
+        "title": "Root Type for AdminWithdrawRequest",
+        "description": "Request message used by admin to withdraw funds from an account",
+        "required": [
+          "accountId",
+          "amount",
+          "symbol",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "description": "Account identifier",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identifier",
+            "type": "string"
+          },
+          "amount": {
+            "description": "Withdraw amount. Should be a positive value",
+            "type": "string"
+          },
+          "requestId": {
+            "description": "Request identifier",
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "req1",
+          "accountId": "acc-01",
+          "symbol": "BTC",
+          "amount": "1.20"
+        }
+      },
+      "AdminPositionAdjustmentRequest": {
+        "title": "Root Type for AdminPositionAdjustmentRequest",
+        "description": "Request message used by admin to adjust position balance",
+        "required": [
+          "accountId",
+          "amount",
+          "symbol",
+          "requestId",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "description": "Account identifier",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identifier",
+            "type": "string"
+          },
+          "amount": {
+            "description": "New amount",
+            "type": "string"
+          },
+          "requestId": {
+            "description": "Request identifier",
+            "type": "string"
+          },
+          "type": {
+            "description": "Balance update type",
+            "enum": [
+              "BALANCE",
+              "AVL_BALANCE"
+            ],
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "req1",
+          "accountId": "acc-01",
+          "symbol": "BTC",
+          "amount": "1.20",
+          "type": "BALANCE"
+        }
+      },
+      "OrderMassCancelRequest": {
+        "title": "Root Type for CancelMassOrder",
+        "description": "Mass order cancellation request message",
+        "required": [
+          "clOrderId",
+          "symbol",
+          "marketId"
+        ],
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "description": "Market identification",
+            "type": "string"
+          },
+          "clOrderId": {
+            "description": "New client order ID for the request",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument Identifier",
+            "type": "string"
+          },
+          "side": {
+            "description": "Order side",
+            "enum": [
+              "B",
+              "S"
+            ],
+            "type": "string"
+          }
+        },
+        "example": {
+          "marketId": "Market1",
+          "clOrderId": "CV123",
+          "symbol": "BTC/USDT",
+          "side": "S"
+        }
+      },
+      "TraderTransferRequest": {
+        "title": "Root Type for AdminDepositRequest",
+        "description": "Request message used by trader to transfer funds between accounts",
+        "required": [
+          "sendingAccountId",
+          "amount",
+          "symbol",
+          "requestId",
+          "receivingAccountId"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "description": "Instrument identifier",
+            "type": "string"
+          },
+          "amount": {
+            "description": "Deposit amount",
+            "type": "string"
+          },
+          "requestId": {
+            "description": "Request identifier",
+            "type": "string"
+          },
+          "sendingAccountId": {
+            "description": "Sending Account identifier",
+            "type": "string"
+          },
+          "receivingAccountId": {
+            "description": "Receiving account identifier",
+            "type": "string"
+          }
+        },
+        "example": {
+          "requestId": "req1",
+          "sendingAccountId": "acc-01",
+          "receivingAccountId": "acc-02",
+          "symbol": "BTC",
+          "amount": "1.20"
+        }
+      },
+      "FuturesNewOrder": {
+        "title": "Root Type for futuresNewOrder",
+        "description": "New order message for futures",
+        "required": [
+          "symbol",
+          "orderType",
+          "side",
+          "orderQty",
+          "marketId",
+          "userId",
+          "clOrderId"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string"
+          },
+          "orderType": {
+            "description": "Order Type",
+            "enum": [
+              "MKT",
+              "LMT",
+              "STOP_LIMIT",
+              "STOP_MARKET"
+            ],
+            "type": "string"
+          },
+          "side": {
+            "enum": [
+              "S",
+              "B"
+            ],
+            "type": "string"
+          },
+          "price": {
+            "type": "string"
+          },
+          "orderQty": {
+            "description": "Order Quantity",
+            "type": "string"
+          },
+          "tif": {
+            "enum": [
+              "GTC",
+              "FOK",
+              "IOC",
+              "GFA"
+            ],
+            "type": "string"
+          },
+          "stopPrice": {
+            "type": "string"
+          },
+          "clOrderId": {
+            "description": "Client Order Id",
+            "type": "string"
+          },
+          "flags": {
+            "description": "Order flags",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "marketId": {
+            "description": "Market Identifier",
+            "type": "string"
+          },
+          "userId": {
+            "description": "",
+            "type": "string"
+          }
+        },
+        "example": {
+          "symbol": "BTC/USDT",
+          "orderType": "LIMIT",
+          "side": "S",
+          "price": "12.13",
+          "orderQty": "1000",
+          "tif": "GFA",
+          "newClOrderId": "some text",
+          "stopPrice": "10.00"
+        }
+      },
+      "FuturesCancelOrder": {
+        "description": "Order cancel request",
+        "required": [
+          "marketId",
+          "symbol",
+          "userId",
+          "clOrderId"
+        ],
+        "type": "object",
+        "properties": {
+          "marketId": {
+            "description": "Market identification",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument identification",
+            "type": "string"
+          },
+          "orderId": {
+            "description": "Order id of the order to be cancelled. Either Order Id or the original client order id can be used for cancellation. if orderId is present, the original client orderId is ignore",
+            "type": "string"
+          },
+          "userId": {
+            "description": "User identification of the owner of the order",
+            "type": "string"
+          },
+          "clOrderId": {
+            "description": "Client order Id",
+            "type": "string"
+          },
+          "origClOrderID": {
+            "description": "Original client order id of the order. This is only used when orderId is not present",
+            "type": "string"
+          }
+        },
+        "example": {
+          "clOrderId": "CV124",
+          "symbol": "ibm",
+          "orderId": 6,
+          "userId": "use34"
+        }
+      },
+      "AdminMassCancelRequest": {
+        "description": "Indication mass cancel request definition",
+        "required": [
+          "requestId",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "description": "User's unique identifier of the request",
+            "type": "string"
+          },
+          "firmId": {
+            "description": "Firm identifier of the mass cancel to be applied",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Cancel reason",
+            "type": "string"
+          },
+          "marketId": {
+            "description": "Market identifier of the mass cancel to be applied",
+            "type": "string"
+          },
+          "symbol": {
+            "description": "Instrument Identifier"
+          },
+          "userId": {
+            "description": "Owner Identifier"
+          }
+        },
+        "example": {
+          "requestId": "CV123",
+          "massCancelType": "FIRM",
+          "firmId": "Firm1",
+          "reason": "Cancelling quotes"
+        }
+      },
+      "FuturesSetLeverage": {
+        "title": "Root Type for SetLeverage",
+        "description": "Leverage will be set per position per trader.",
+        "required": [
+          "leverage",
+          "symbol"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "description": "Symbol/Instrument ",
+            "type": "string",
+            "example": "USDT"
+          },
+          "leverage": {
+            "description": "Leverage as an integer",
+            "minimum": 0,
+            "type": "integer",
+            "example": "10"
+          },
+          "accountId": {
+            "description": "Account Id (optional)",
+            "type": "string"
+          }
+        },
+        "example": {
+          "symbol": "USDT",
+          "leverage": "10"
+        }
+      },
+      "FuturesSetMarginMode": {
+        "title": "Root Type for SetMarginMode",
+        "description": "Set margin mode\n",
+        "required": [
+          "marginMode",
+          "symbol"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "description": "Symbol/Instrument ",
+            "type": "string",
+            "example": "USDT"
+          },
+          "accountId": {
+            "description": "Account Id (optional)",
+            "type": "string"
+          },
+          "marginMode": {
+            "description": "margin mode as an integer",
+            "minimum": 0,
+            "enum": [
+              "CROSS",
+              "ISOLATED"
+            ],
+            "type": "string",
+            "example": "CROSS"
+          }
+        },
+        "example": {
+          "symbol": "some text",
+          "accountId": "some text",
+          "marginMode": "CROSS"
+        }
+      },
+      "FuturesChangeMargin": {
+        "title": "Root Type for change margin",
+        "description": "Change margin\n",
+        "required": [
+          "amount",
+          "symbol"
+        ],
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "description": "Instrument identification",
+            "type": "string",
+            "example": "USDT"
+          },
+          "amount": {
+            "description": "Amount to be changed. Can be positive or negative value.",
+            "type": "string"
+          }
+        },
+        "example": {
+          "symbol": "BTCUSDTJ30",
+          "amount": "1200.50"
+        }
+      }
+    }
+  }
+}

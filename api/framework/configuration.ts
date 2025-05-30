@@ -1,6 +1,6 @@
 import exp from 'constants';
 import { formatValueForUrl, loadScript } from './utils';
-import { AxiosError, AxiosResponse } from 'axios';
+import { request, APIResponse } from '@playwright/test';
 import { RestClient } from './rest-client';
 
 const debugL3 = require('debug')('fw-L3-admin-session');
@@ -189,34 +189,30 @@ export async function getAuth0TraderClientId() {
     });
 }
 
- export async function updateReferenceData(entity: string, id: any, request: any ,client:RestClient) {
-    let result = await client.put<any>(getAdminApiUrl(entity) + id, request)
-        .then((result: AxiosResponse<any>) => {
-            debugL3('response:\n' + JSON.stringify(result.data));
-            return result.data;
-        })
-        .catch((err: AxiosError) => {
-            debugL3('Error: ', err);
-            debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-            return err.response?.data;
-        });
-
-    return result;
+ export async function updateReferenceData(entity: string, id: any, requestData: any ,client:RestClient) {
+    try {
+        const response: APIResponse = await client.put(getAdminApiUrl(entity) + id, requestData);
+        const body = await response.json();
+        debugL3('response:\n' + JSON.stringify(body));
+        return body;
+    } catch (error: any) { 
+        debugL3('Error: ', error);
+        debugL1('error: (' + error.response?.status + ')\n' + JSON.stringify(error.response?.data));
+        return error.response?.data;
+    }
 }
 
 export async function getReferenceData(entity: string, id: any,client:RestClient) {
-    let result = await client.get<any>(getAdminApiUrl(entity) + id)
-        .then((result: AxiosResponse<any>) => {
-            debugL3('response:\n' + JSON.stringify(result.data));
-            return result.data;
-        })
-        .catch((err: AxiosError) => {
-            debugL3('Error: ', err);
-            debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-            return err.response?.data;
-        });
-
-    return result;
+    try {
+        const response: APIResponse = await client.get(getAdminApiUrl(entity) + id);
+        const body = await response.json();
+        debugL3('response:\n' + JSON.stringify(body));
+        return body;
+    } catch (error: any) {
+        debugL3('Error: ', error);
+        debugL1('error: (' + error.response?.status + ')\n' + JSON.stringify(error.response?.data));
+        return error.response?.data;
+    }
 }
 
 export class ConfigurationProvider {

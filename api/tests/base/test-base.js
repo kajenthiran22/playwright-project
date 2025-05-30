@@ -1,7 +1,8 @@
-const { delay } = require('@yaalalabs/p8-e2e-api-framework');
+const { delay } = require('../../framework/utils');
 const { setupRefData } = require('../utils/reference-data-util');
 const { validateResult, validateError, validateRecords } = require('../utils/validation-util');
 const { log } = require('../utils/logging-util');
+const { test } = require('@playwright/test');
 const timestamp = Date.now().toString().slice(-6);
 class TestBase {
     operatorId = "apioperator" + timestamp;
@@ -109,11 +110,11 @@ class TestBase {
     }
 
     setupHooks() {
-        before(async () => {
+        test.beforeAll(async () => {
             await this.before();
         });
 
-        after(async () => {
+        test.afterAll(async () => {
             await this.after();
         });
     }

@@ -3,7 +3,7 @@ import { Session } from './session';
 import { diffString } from 'json-diff';
 
 const Socket = require('ws');
-const chai = require('chai');
+import { expect } from '@playwright/test';
 const verify = require('./verify');
 const debugL3 = require('debug')('fw-L3-web-socket');
 const debugL1 = require('debug')('fw-L1-web-socket');
@@ -195,7 +195,7 @@ export class WebSocket {
                 return false;
             }
         } else {
-            chai.expect.fail('(' + this.session.getUsername() + ' ' + this.uuid + ') send failed: connection is not ready or pending disconnection', data);
+            throw new Error(`(${this.session.getUsername()} ${this.uuid}) send failed: connection is not ready or pending disconnection — payload: ${data}`);
         }
 
         return false;
@@ -643,7 +643,7 @@ export class WebSocket {
             if (this.options.ignore.unmatched)
                 console.log("not matched. but continuing without failing the test case")
             else
-                chai.expect.fail('no match found for ' + JSON.stringify(expected));
+                throw new Error(`no match found for ${JSON.stringify(expected)}`);
         }
         if (splice) {
             // need to pull out the matched messages
@@ -661,7 +661,7 @@ export class WebSocket {
     private async expectInt(expected: any, timeout: number /* in milliseconds*/, count: number /* expeted msg count*/, retryCount: number): Promise<any> {
         if ((this.connected() == false) && ((this.messages.length - this.rx) < count)) {
             debugL2('(' + this.session.getUsername() + ' ' + this.uuid + ')' + ' NOT CONNECTED.  expectINT() will fail. Expected count=' + count + ' InQ=' + (this.messages.length - this.rx) + '\n');
-            chai.expect.fail('not connected');
+            throw new Error('not connected');
         }
         else {
             debugL2('(' + this.session.getUsername() + ' ' + this.uuid + ')' + '------------expectINT() expected count=[' + count + '] & timeout=[' + timeout + '] & retry=' + retryCount)
@@ -669,7 +669,7 @@ export class WebSocket {
 
         let sleep = 100;
         let totalSlept = 0
-        let matched = []
+        let matched: any[] = []
 
         for (let i = 0; i < timeout; i += sleep) {
             totalSlept += sleep
@@ -685,7 +685,7 @@ export class WebSocket {
 
         if (expected == null) {
             debugL2('expect none');
-            chai.expect((this.messages.length - this.rx)).to.equal(0);
+            expect((this.messages.length - this.rx)).toEqual(0);
         }
         else if (Array.isArray(expected)) {
             let expectedIndex = 0
@@ -732,7 +732,7 @@ export class WebSocket {
             if (this.options.ignore.unmatched)
                 console.log("no matching messages received within the timeout. but continuing without failing the test case")
             else
-                chai.expect.fail('no matching messages received within the timeout ');
+                throw new Error('no matching messages received within the timeout ');
         }
         else {
             let actual = this.messages[this.rx]

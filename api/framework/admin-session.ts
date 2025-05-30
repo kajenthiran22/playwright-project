@@ -1,10 +1,11 @@
-import axios, { AxiosError, AxiosResponse } from 'axios';
+import { request, APIResponse, APIRequestContext } from '@playwright/test';
 import { getAdminApiUrl, getTraderApiUrl, getAdminApiBaseUrl, getAdminApiEndPoint, UrlParams, updateReferenceData } from './configuration';
 import { RestClient } from './rest-client';
 import { Session, SessionType } from './session';
 import { formatValueForUrl } from './utils';
 import { WebSocket } from './web-socket';
 import { v4 as uuidv4 } from 'uuid';
+import { re } from 'mathjs';
 
 
 const debugL3 = require('debug')('fw-L3-admin-session');
@@ -17,10 +18,10 @@ export function getUniqueId(prefix: string): string {
 }
 export class AdminSession extends Session {
 
-    protected client: RestClient;
+    protected client!: RestClient;
     protected id: number;
-    protected err: AxiosError;
-    protected socket: WebSocket;
+    protected err: any;
+    protected socket!: WebSocket;
 
     public constructor(id: string) {
         super(id, SessionType.admin);
@@ -30,7 +31,7 @@ export class AdminSession extends Session {
     public async start() {
         await super.login();
 
-        this.client = new RestClient(this);
+        this.client = await RestClient.create(this);
 
         this.socket = new WebSocket(this);
         await this.socket.connect();
@@ -110,36 +111,32 @@ export class AdminSession extends Session {
 
     private async get(entity: string, id?: string) {
         this.err = null;
-        let result = await this.client.get<any>(getAdminApiUrl(entity) + (id ? formatValueForUrl(id) : ''))
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.get(getAdminApiUrl(entity) + (id ? formatValueForUrl(id) : ''));
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     private async getDealExportFile(entity: string, id?: string) {
         this.err = null;
-        let result = axios.get(entity)
-            .then((result: any) => {
-                const content = Buffer.from(result.data, 'binary');
-                return content;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.get(entity);
+            const responseBody = await response.json();
+            const content = Buffer.from(responseBody, 'binary');
+            return content;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async getCalendars() {
@@ -285,19 +282,18 @@ export class AdminSession extends Session {
 
     private async add(entity: string, request: any) {
         this.err = null;
-        let result = await this.client.post<any>(getAdminApiUrl(entity), request)
-            .then((result: AxiosResponse<any>) => {
-                debugL2('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL2('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            // request.requestId = this.nextId();
+            const response: APIResponse = await this.client.post(getAdminApiUrl(entity), request);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return {status: 'ERROR', message: err.message};
+        }
     }
 
     public async addCalendar(request: any) {
@@ -377,19 +373,17 @@ export class AdminSession extends Session {
         const request = {};
         request['password'] = password;
 
-        let result = await this.client.post<any>(userUrl + userId + '/resetPassword', request)
-            .then((result: AxiosResponse<any>) => {
-                debugL2('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL2('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.post(userUrl + userId + '/resetPassword', request);
+            const responseBody = await response.json();
+            debugL2('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL2('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async addNotification(request: any) {
@@ -484,19 +478,18 @@ export class AdminSession extends Session {
             }
             params += key + '=' + request[key];
         }
-        let result = await this.client.delete<any>(getAdminApiUrl(entity) + id + '?' + params)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
 
-        return result;
+        try {
+            const response: APIResponse = await this.client.delete(getAdminApiUrl(entity) + id + '?' + params);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async deleteUser(userId: any, request: { requestedBy: string, comment: string }) {
@@ -526,22 +519,25 @@ export class AdminSession extends Session {
 
     private async postWithValidate(id: string, message: any, validateResponse: boolean = false) {
         this.err = null;
-        let result = await this.client.post<any>(getAdminApiUrl(id), message)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response;
-            });
+        try {
+            const response: APIResponse = await this.client.post(getAdminApiUrl(id), message);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
 
-        if ((validateResponse) && (this.err != null))
-            this.validateResponse(result, 'post', getAdminApiEndPoint(id));
+            if (validateResponse && !response.ok()) {
+                this.validateResponse(response, 'post', getAdminApiEndPoint(id));
+            }
+            return responseBody;
+        } catch (error: any) {
+            this.err = error;
+            const data = error?.response ? await error.response.json() : error;
+            debugL1(`error:\n` + JSON.stringify(data));
 
-        return result.data;
+            if (validateResponse) {
+                this.validateResponse(error.response, 'post', getAdminApiEndPoint(id));
+            }
+            throw error;
+        }
     }
 
     public async updateNextTradingDay(updateNextTradingDay: any, validateResponse: boolean = false) {
@@ -554,62 +550,70 @@ export class AdminSession extends Session {
 
     private async putWithValidate(id: string, message: any, validateResponse: boolean = false, params?: UrlParams) {
         this.err = null;
-        let result = await this.client.put<any>(getAdminApiUrl(id, params), message)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response;
-            });
+        try {
+            const response: APIResponse = await this.client.put(getAdminApiUrl(id, params), message);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
 
-        if ((validateResponse) && (this.err != null))
-            this.validateResponse(result, 'put', getAdminApiEndPoint(id));
+            if (validateResponse && !response.ok()) {
+                this.validateResponse(response, 'put', getAdminApiEndPoint(id));
+            }
+            return responseBody;
+        } catch (error: any) {
+            this.err = error;
+            const data = error?.response ? await error.response.json() : error;
+            debugL1(`error:\n` + JSON.stringify(data));
 
-        return result.data;
+            if (validateResponse) {
+                this.validateResponse(error.response, 'put', getAdminApiEndPoint(id));
+            }
+            throw error;
+        }
     }
 
     private async deleteWithValidate(id: string, message: any, validateResponse: boolean = false, params?: UrlParams) {
         this.err = null;
-        let result = await this.client.delete<any>(getAdminApiUrl(id, params), message)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response;
-            });
+        try {  
+            const response: APIResponse = await this.client.delete(getAdminApiUrl(id, params), message);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
 
-        if ((validateResponse) && (this.err != null))
-            this.validateResponse(result, 'delete', getAdminApiEndPoint(id));
+            if (validateResponse && !response.ok()) {
+                this.validateResponse(response, 'delete', getAdminApiEndPoint(id));
+            }
+            return responseBody;
+        } catch (error: any) {
+            this.err = error;
+            const data = error?.response ? await error.response.json() : error;
+            debugL1(`error:\n` + JSON.stringify(data));
 
-        return result.data;
+            if (validateResponse) {
+                this.validateResponse(error.response, 'delete', getAdminApiEndPoint(id));
+            }
+            throw error;
+        }
     }
 
     private async getWithValidate(id: string, params?: UrlParams, validateResponse: boolean = false) {
         this.err = null;
-        let result = await this.client.get<any>(getAdminApiUrl(id, params))
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response;
-            });
+        try {
+            const response: APIResponse = await this.client.get(getAdminApiUrl(id, params));
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            if (validateResponse && !response.ok()) {
+                this.validateResponse(response, 'get', getAdminApiEndPoint(id));
+            }
+            return responseBody;
+        } catch (error: any) { 
+            this.err = error;
+            const data = error?.response ? await error.response.json() : error;
+            debugL1(`error:\n` + JSON.stringify(data));
 
-        if ((validateResponse) && (this.err != null))
-            this.validateResponse(result, 'get', getAdminApiEndPoint(id));
-
-        return result.data;
+            if (validateResponse) {
+                this.validateResponse(error.response, 'get', getAdminApiEndPoint(id));
+            }
+            throw error;
+        }
     }
 
     public async flagForDelete(entity: string, id: string, comment: string, validateResponse: boolean = false) {
@@ -683,7 +687,7 @@ export class AdminSession extends Session {
     public async getSystemState(validateResponse: boolean = false) {
         debugL2('Get system state state');
 
-        return await this.getWithValidate("/system-manager/v1/systemState/", null, validateResponse);
+        return await this.getWithValidate("/system-manager/v1/systemState/", undefined, validateResponse);
     }
 
     public async runSystemEvent(scheduleEventId: string, validateResponse: boolean = false) {
@@ -714,19 +718,17 @@ export class AdminSession extends Session {
         debugL2('get market session marketId=' + marketId);
 
         this.err = null;
-        let result = await this.client.get<any>(getAdminApiUrl('/market-manager/v1/market-session/') + marketId + (details ? '?getInstruments=true' : ''))
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.get(getAdminApiUrl('/market-manager/v1/market-session/') + marketId + (details ? '?getInstruments=true' : ''));
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async setMarketSession(marketId: string, sessionType: string) {
@@ -734,42 +736,37 @@ export class AdminSession extends Session {
         let request = {
             requestId: this.nextId(),
             sessionType: sessionType
-
         };
 
         this.err = null;
-        let result = await this.client.put<any>(getAdminApiUrl('/market-manager/v1/market-session/') + encodeURIComponent(marketId), request)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.put(getAdminApiUrl('/market-manager/v1/market-session/') + encodeURIComponent(marketId), request);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async getInstrumentSession(marketId: string, symbol: string) {
         debugL2('get instrument session marketIdx=' + marketId + ', symbol=' + symbol);
 
         this.err = null;
-        let result = await this.client.get<any>(getAdminApiUrl('/market-manager/v1/instrument-session/') + marketId + '/' + formatValueForUrl(symbol))
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.get(getAdminApiUrl('/market-manager/v1/instrument-session/') + marketId + '/' + formatValueForUrl(symbol));
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async setInstrumentSession(marketId: string, symbol: string, sessionType: string) {
@@ -780,19 +777,17 @@ export class AdminSession extends Session {
         };
 
         this.err = null;
-        let result = await this.client.put<any>(getAdminApiUrl('/market-manager/v1/instrument-session/') + marketId + '/' + formatValueForUrl(symbol), request)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.put(getAdminApiUrl('/market-manager/v1/instrument-session/') + marketId + '/' + formatValueForUrl(symbol), request);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async waitForMarketSession(marketId: string, sessionType: string, timeout?: number) {
@@ -1011,7 +1006,7 @@ export class AdminSession extends Session {
     public async getAllocationUploadLink(validateResponse: boolean = false) {
         debugL2('getting allocation upload link');
 
-        return await this.getWithValidate("/pt-service/v1/allocation-upload-link", null, validateResponse);
+        return await this.getWithValidate("/pt-service/v1/allocation-upload-link", undefined, validateResponse);
     }
 
     public async postAllocationSummary(data: any, validateResponse: boolean = false) {
@@ -1097,7 +1092,7 @@ export class AdminSession extends Session {
 
         return await this.postWithValidate("/contracts/v1/deploy", deployRequest, validateResponse);
     }
-    public async freezeToken(symbol: any, status: boolean, blockchain: string = null, validateResponse: boolean = false) {
+    public async freezeToken(symbol: any, status: boolean, blockchain: string | null = null, validateResponse: boolean = false) {
         debugL2('freeze token');
 
         this.err = null;
@@ -1113,7 +1108,7 @@ export class AdminSession extends Session {
         return await this.postWithValidate("/contracts/v1/freeze", request, validateResponse);
     }
 
-    public async issueTokens(symbol: any, issueAmount: string, firmId: string = null, validateResponse: boolean = false) {
+    public async issueTokens(symbol: any, issueAmount: string, firmId: string | null = null, validateResponse: boolean = false) {
         debugL2('issue tokens');
 
         this.err = null;
@@ -1129,7 +1124,7 @@ export class AdminSession extends Session {
         return await this.postWithValidate("/contracts/v1/issue", issueRequest, validateResponse);
     }
 
-    public async burnTokens(symbol: any, burnAmount: string, firmId: string = null, validateResponse: boolean = false) {
+    public async burnTokens(symbol: any, burnAmount: string, firmId: string | null = null, validateResponse: boolean = false) {
         debugL2('burn tokens');
 
         this.err = null;
@@ -1226,19 +1221,17 @@ export class AdminSession extends Session {
         debugL2('query orders query=' + JSON.stringify(query));
 
         this.err = null;
-        let result = await this.client.post<any>(getAdminApiUrl('/order/v1/query/'), query)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.post(getAdminApiUrl('/order/v1/query/'), query);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async redeemTokensResponse(reference: string, response: string, validateResponse: boolean = false) {
@@ -1392,38 +1385,34 @@ export class AdminSession extends Session {
         debugL2('query chats query=' + JSON.stringify(query));
 
         this.err = null;
-        let result = await this.client.post<any>(getAdminApiUrl('/chat/v1/query'), query)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.post(getAdminApiUrl('/chat/v1/query'), query);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async exportDeals(query: any) {
         debugL2('export deals query=' + JSON.stringify(query));
 
         this.err = null;
-        let result = await this.client.post<any>(getAdminApiUrl('/trade/v1/deal-export'), query)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data;
-            })
-            .catch((err: AxiosError) => {
-                debugL3('Error: ', err);
-                debugL1('error: (' + err.response?.status + ')\n' + JSON.stringify(err.response?.data));
-                this.err = err;
-                return err.response?.data;
-            });
-
-        return result;
+        try {
+            const response: APIResponse = await this.client.post(getAdminApiUrl('/trade/v1/deal-export'), query);
+            const responseBody = await response.json();
+            debugL3('response:\n' + JSON.stringify(responseBody));
+            return responseBody;
+        } catch (err: any) {
+            debugL3('Error: ', err);
+            debugL1('error: (' + err.status + ')\n' + JSON.stringify(err));
+            this.err = err;
+            return err.message;
+        }
     }
 
     public async subscribeForGeneralData(options?: any) {

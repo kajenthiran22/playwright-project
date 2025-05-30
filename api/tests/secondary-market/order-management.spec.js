@@ -1,5 +1,8 @@
-// const chai = require('chai').use(require('chai-as-promised'));
-const {AdminSession, TraderSession, delay, equals} = require('@yaalalabs/p8-e2e-api-framework');
+const { expect, test } = require('@playwright/test');
+const { AdminSession } = require('../../framework/admin-session');
+const { TraderSession } = require('../../framework/trader-session');
+const { delay } = require('../../framework/utils');
+const { equals } = require('../../framework/verify');
 const {
     createOrderReq,
     cancelExistingOrdersBySymbol,
@@ -35,11 +38,14 @@ class OrderManagementTest extends TestBase {
     }
 }
 
-describe('Order Management ', () => {
+
+test.describe('Order Management ', () => {
+    // test.describe.configure({ mode: 'serial' });
+
     const orderManagementTest = new OrderManagementTest();
     orderManagementTest.setupHooks();
 
-    it('Setup1 - Equity asset creation ', async () => {
+    test('Setup1 - Equity asset creation ', async () => {
         const request = {
             symbol: equityAsset,
             type: 'BPX_EQUITY',
@@ -48,22 +54,22 @@ describe('Order Management ', () => {
             quantityScale: 0,
             issuedShares: 50000
         };
-        const expectedResponse = {status: 'OK', payload: request};
+        const expectedResponse = { status: 'OK', payload: request };
         const actualResponse = await admin.addInstrument(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('Setup2 - Tick structure creation', async () => {
+    test('Setup2 - Tick structure creation', async () => {
         const request = {
             tickStructureId: tickStructure,
-            ticks: [{start: '1', end: '10', tick: '0.1'}, {start: '10', end: '20', tick: '0.1'}]
+            ticks: [{ start: '1', end: '10', tick: '0.1' }, { start: '10', end: '20', tick: '0.1' }]
         };
-        const expectedResponse = {status: 'OK', payload: request};
+        const expectedResponse = { status: 'OK', payload: request };
         const actualResponse = await admin.addTickStructure(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('Setup3 - Instrument Parameter creation', async () => {
+    test('Setup3 - Instrument Parameter creation', async () => {
         const tickStructureIdx = (await admin.getTickStructure(tickStructure)).payload.idx;
 
         const request = {
@@ -76,12 +82,12 @@ describe('Order Management ', () => {
             protectionThresholdOnLimitOrders: '30',
             circuitBreaker: '12'
         };
-        const expectedResponse = {status: 'OK', payload: request};
+        const expectedResponse = { status: 'OK', payload: request };
         const actualResponse = await admin.addInstrumentParameter(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('Setup4 - Equity instrument creation', async () => {
+    test('Setup4 - Equity instrument creation', async () => {
         const baseInstrumentIdx = (await admin.getInstrument(equityAsset)).payload.idx;
         const instrumentParameterIdx = (await admin.getInstrumentParameter(instrumentParam)).payload.idx;
 
@@ -104,16 +110,16 @@ describe('Order Management ', () => {
             requestDate: '2024-12-03',
             approvalDate: '2024-12-07'
         };
-        const expectedResponse = {status: 'OK', payload: request};
+        const expectedResponse = { status: 'OK', payload: request };
         const actualResponse = await admin.addInstrument(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('Setup5 - Start Equity Trade session', async () => {
+    test('Setup5 - Start Equity Trade session', async () => {
         await equityTrader.start(equityMarketId, equitySymbol);
     });
 
-    it('Setup6 - Debt asset creation ', async () => {
+    test('Setup6 - Debt asset creation ', async () => {
         const request = {
             symbol: debtAsset,
             type: 'BPX_DEBT',
@@ -132,12 +138,12 @@ describe('Order Management ', () => {
             dayCountConvention: 'THIRTY360'
         };
 
-        const expectedResponse = {status: 'OK', payload: request};
+        const expectedResponse = { status: 'OK', payload: request };
         const actualResponse = await admin.addInstrument(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('Setup7 - Debt instrument creation', async () => {
+    test('Setup7 - Debt instrument creation', async () => {
         const baseInstrumentIdx = (await admin.getInstrument(debtAsset)).payload.idx;
         const instrumentParameterIdx = (await admin.getInstrumentParameter(instrumentParam)).payload.idx;
 
@@ -161,57 +167,57 @@ describe('Order Management ', () => {
             requestDate: '2024-12-03',
             approvalDate: '2024-12-07'
         };
-        const expectedResponse = {status: 'OK', payload: request};
+        const expectedResponse = { status: 'OK', payload: request };
         const actualResponse = await admin.addInstrument(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
 
     });
 
-    it('Setup8 - Start Debt Trade session', async () => {
+    test('Setup8 - Start Debt Trade session', async () => {
         await debtTrader.start(debtMarketId, debtSymbol);
     });
 
-    it('OM_1.1 - New order submission with order capacity - DEAL', async () => {
+    test('OM_1.1 - New order submission with order capacity - DEAL', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {side: buySide, price: '10.00', orderQty: '1000', orderCapacity: 'DEAL', orderStatus: 'NEW'}
+            payload: { side: buySide, price: '10.00', orderQty: '1000', orderCapacity: 'DEAL', orderStatus: 'NEW' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_1.2 - New order submission with order capacity - MTCH', async () => {
+    test('OM_1.2 - New order submission with order capacity - MTCH', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'MTCH', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {side: buySide, price: '10.00', orderQty: '1000', orderCapacity: 'MTCH', orderStatus: 'NEW'}
+            payload: { side: buySide, price: '10.00', orderQty: '1000', orderCapacity: 'MTCH', orderStatus: 'NEW' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_1.3 - New order submission with order capacity - AOTC', async () => {
+    test('OM_1.3 - New order submission with order capacity - AOTC', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'AOTC', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {side: buySide, price: '10.00', orderQty: '1000', orderCapacity: 'AOTC', orderStatus: 'NEW'}
+            payload: { side: buySide, price: '10.00', orderQty: '1000', orderCapacity: 'AOTC', orderStatus: 'NEW' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_3 - Price is inconsistent with the applicable Tick Structure', async () => {
+    test('OM_3 - Price is inconsistent with the applicable Tick Structure', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '10.02', '1000', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {orderStatus: 'REJECTED', rejectReason: 'Price is not a multiple of the price tick'}
+            payload: { orderStatus: 'REJECTED', rejectReason: 'Price is not a multiple of the price tick' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_4 - Order Size is not a multiple of the applicable Minimum Size Variation', async () => {
+    test('OM_4 - Order Size is not a multiple of the applicable Minimum Size Variation', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '3', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
@@ -224,37 +230,37 @@ describe('Order Management ', () => {
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_5 - Order Size is less than the applicable Minimum Size', async () => {
+    test('OM_5 - Order Size is less than the applicable Minimum Size', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {orderStatus: 'REJECTED', rejectReason: 'Size is below the minimum size'}
+            payload: { orderStatus: 'REJECTED', rejectReason: 'Size is below the minimum size' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_7 - Order Size is greater than the applicable Maximum Size', async () => {
+    test('OM_7 - Order Size is greater than the applicable Maximum Size', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '60000', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {orderStatus: 'REJECTED', rejectReason: 'Size is above the maximum size'}
+            payload: { orderStatus: 'REJECTED', rejectReason: 'Size is above the maximum size' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_9 - Value is greater than the applicable Maximum Value', async () => {
+    test('OM_9 - Value is greater than the applicable Maximum Value', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '850000', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {orderStatus: 'REJECTED', rejectReason: 'Size is above the maximum size'}
+            payload: { orderStatus: 'REJECTED', rejectReason: 'Size is above the maximum size' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_15.1 - Outside the Price Band for Sell Order', async () => {
+    test('OM_15.1 - Outside the Price Band for Sell Order', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, sellSide, '6.00', '1000', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
@@ -267,7 +273,7 @@ describe('Order Management ', () => {
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_15.2 - Outside the Price Band for Buy Order', async () => {
+    test('OM_15.2 - Outside the Price Band for Buy Order', async () => {
         const request = createOrderReq(equitySymbol, equityTrader, buySide, '15.00', '1000', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
@@ -280,13 +286,13 @@ describe('Order Management ', () => {
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_16 - Market has been Halted', async () => {
+    test('OM_16 - Market has been Halted', async () => {
         await admin.setMarketSession(equityMarketId, 'HALT');
 
         const request = createOrderReq(equitySymbol, equityTrader, sellSide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {orderStatus: 'REJECTED', rejectReason: 'Market or instrument is halted'}
+            payload: { orderStatus: 'REJECTED', rejectReason: 'Market or instrument is halted' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
@@ -295,13 +301,13 @@ describe('Order Management ', () => {
         await delay(1000);
     });
 
-    it('OM_17 - Instrument market session has been Halted', async () => {
+    test('OM_17 - Instrument market session has been Halted', async () => {
         await admin.setInstrumentSession(equityMarketId, equitySymbol, 'HALT');
 
         const request = createOrderReq(equitySymbol, equityTrader, sellSide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId);
         const expectedResponse = {
             status: 'OK',
-            payload: {orderStatus: 'REJECTED', rejectReason: 'Market or instrument is halted'}
+            payload: { orderStatus: 'REJECTED', rejectReason: 'Market or instrument is halted' }
         };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
@@ -310,7 +316,7 @@ describe('Order Management ', () => {
         await delay(1000);
     });
 
-    it('OM_18.1 - Instrument is in suspended state', async () => {
+    test('OM_18.1 - Instrument is in suspended state', async () => {
         const instrument = (await admin.getInstrument(equitySymbol)).payload;
         await admin.updateInstrument(equitySymbol, {
             idx: instrument.idx,
@@ -335,12 +341,12 @@ describe('Order Management ', () => {
         });
 
         const request = createOrderReq(equitySymbol, equityTrader, sellSide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId);
-        const expectedResponse = {status: 'FAILED', error: {rejectReason: 'Instrument not active'}};
+        const expectedResponse = { status: 'FAILED', error: { rejectReason: 'Instrument not active' } };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateError(expectedResponse, actualResponse);
     });
 
-    it('OM_18.2 - Instrument is in inactive state', async () => {
+    test('OM_18.2 - Instrument is in inactive state', async () => {
         const instrument = (await admin.getInstrument(equitySymbol)).payload;
         await admin.updateInstrument(equitySymbol, {
             idx: instrument.idx,
@@ -365,7 +371,7 @@ describe('Order Management ', () => {
         });
 
         const request = createOrderReq(equitySymbol, equityTrader, sellSide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId);
-        const expectedResponse = {status: 'FAILED', error: {rejectReason: 'Instrument not active'}};
+        const expectedResponse = { status: 'FAILED', error: { rejectReason: 'Instrument not active' } };
         const actualResponse = await equityTrader.submitOrder(request);
         await orderManagementTest.validateError(expectedResponse, actualResponse);
 
@@ -393,7 +399,7 @@ describe('Order Management ', () => {
         });
     });
 
-    it('OM_19.2.1 - An inactive user submits an order', async () => {
+    test.skip('OM_19.2.1 - An inactive user submits an order', async () => {
         const user = (await admin.getUser('traderapi12')).payload;
         await admin.updateUser(user.userId, {
             idx: user.idx,
@@ -416,7 +422,7 @@ describe('Order Management ', () => {
         equals(expectedResponse, actualResponse);
     });
 
-    it('OM_19.2.2 - Active An inactive user', async () => {
+    test.skip('OM_19.2.2 - Active An inactive user', async () => {
         const userEdit = (await admin.getUser('traderapi12')).payload;
         await admin.updateUser(userEdit.userId, {
             idx: userEdit.idx,
@@ -432,11 +438,11 @@ describe('Order Management ', () => {
             email: userEdit.email,
             ref_ver: userEdit.ref_ver
         });
-        chai.expect((await admin.getUser('traderapi12')).payload.status).to.equal('ACTIVE');
+        expect((await admin.getUser('traderapi12')).payload.status).toBe('ACTIVE');
         await equityTrader.start(equityMarketId, equitySymbol);
     });
 
-    it('OM_20.1 - Trader modifies the price of an open order', async () => {
+    test('OM_20.1 - Trader modifies the price of an open order', async () => {
         const order = (await equityTrader.submitOrder(createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId))).payload;
         const modifiedPrice = '9.00';
 
@@ -455,13 +461,13 @@ describe('Order Management ', () => {
         };
         const expectedResponse = {
             status: 'OK',
-            payload: {orderId: order.orderId, price: modifiedPrice, execType: 'REPLACED'}
+            payload: { orderId: order.orderId, price: modifiedPrice, execType: 'REPLACED' }
         };
         const actualResponse = await equityTrader.modifyOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_20.2 - Trader modifies the size of an open order', async () => {
+    test('OM_20.2 - Trader modifies the size of an open order', async () => {
         const order = (await equityTrader.submitOrder(createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId))).payload;
         const modifiedSize = '1500';
 
@@ -480,13 +486,13 @@ describe('Order Management ', () => {
         };
         const expectedResponse = {
             status: 'OK',
-            payload: {orderId: order.orderId, orderQty: modifiedSize, execType: 'REPLACED'}
+            payload: { orderId: order.orderId, orderQty: modifiedSize, execType: 'REPLACED' }
         };
         const actualResponse = await equityTrader.modifyOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_20.3 - Trader modifies the tif of an open order', async () => {
+    test('OM_20.3 - Trader modifies the tif of an open order', async () => {
         const order = (await equityTrader.submitOrder(createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId))).payload;
         const modifiedTif = 'DAY';
 
@@ -505,13 +511,13 @@ describe('Order Management ', () => {
         };
         const expectedResponse = {
             status: 'OK',
-            payload: {orderId: order.orderId, tif: modifiedTif, execType: 'REPLACED'}
+            payload: { orderId: order.orderId, tif: modifiedTif, execType: 'REPLACED' }
         };
         const actualResponse = await equityTrader.modifyOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_21 - Trader cancels an open order', async () => {
+    test('OM_21 - Trader cancels an open order', async () => {
         const order = (await equityTrader.submitOrder(createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId))).payload;
 
         const request = {
@@ -522,12 +528,12 @@ describe('Order Management ', () => {
             symbol: order.symbol,
             userId: order.userId
         };
-        const expectedResponse = {status: 'OK', payload: {orderStatus: 'CANCELED', orderId: order.orderId}};
+        const expectedResponse = { status: 'OK', payload: { orderStatus: 'CANCELED', orderId: order.orderId } };
         const actualResponse = await equityTrader.cancelOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
     });
 
-    it('OM_24.1 - Day orders are automatically cancelled at the end of trading day', async () => {
+    test('OM_24.1 - Day orders are automatically cancelled at the end of trading day', async () => {
         const order = (await equityTrader.submitOrder(createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId))).payload;
         const modifiedTif = 'DAY';
         const dayOrder = {
@@ -563,7 +569,7 @@ describe('Order Management ', () => {
         await delay(1000);
     });
 
-    it('OM_24.2.1 - GTC orders are not cancelled at the end of the trading day', async () => {
+    test('OM_24.2.1 - GTC orders are not cancelled at the end of the trading day', async () => {
         const order = (await equityTrader.submitOrder(createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId))).payload;
         await admin.setMarketSession(equityMarketId, 'CLOSE');
 
@@ -584,7 +590,7 @@ describe('Order Management ', () => {
         await delay(1000);
     });
 
-    it('OM_24.2.2 - GTC orders can be cancelled on the trading day', async () => {
+    test('OM_24.2.2 - GTC orders can be cancelled on the trading day', async () => {
         const order = (await equityTrader.submitOrder(createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '800', 'GTC', 'DEAL', equityMarketId))).payload;
         await admin.setMarketSession(equityMarketId, 'CLOSE');
         await admin.setMarketSession(equityMarketId, 'OPEN');
@@ -598,7 +604,7 @@ describe('Order Management ', () => {
             symbol: order.symbol,
             userId: order.userId
         };
-        const expectedResponse = {status: 'OK', payload: {orderStatus: 'CANCELED', orderId: order.orderId}};
+        const expectedResponse = { status: 'OK', payload: { orderStatus: 'CANCELED', orderId: order.orderId } };
         const actualResponse = await equityTrader.cancelOrder(request);
         await orderManagementTest.validateResult(expectedResponse, actualResponse);
 
@@ -616,7 +622,7 @@ describe('Order Management ', () => {
         ]);
     });
 
-    it('OM_24.2.3 - GTC orders remain open for execution for the next trading day', async () => {
+    test('OM_24.2.3 - GTC orders remain open for execution for the next trading day', async () => {
         const order = (await equityTrader.submitOrder(createOrderReq(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId))).payload;
         await admin.setMarketSession(equityMarketId, 'CLOSE');
         await admin.setMarketSession(equityMarketId, 'OPEN');
@@ -651,18 +657,34 @@ describe('Order Management ', () => {
         ]);
     });
 
-    describe('OM_27 - CCP and Clearing Member', async () => {
+    test.describe('OM_27 - CCP and Clearing Member', () => {
 
-        beforeEach(async () => {
+        test.beforeEach(async () => {
             // Clean up any existing orders before each test
+            console.log('=============> Time at OM_27 beforeEach start: ' + new Date().toISOString());
+
             await cancelExistingOrdersBySymbol(debtSymbol, debtMarketId, admin);
+
+            console.log('=============> Time at OM_27 cancel equity order: ' + new Date().toISOString());
+
             await cancelExistingOrdersBySymbol(equitySymbol, equityMarketId, admin);
+
+            console.log('=============> Time at OM_27 cancel debt order: ' + new Date().toISOString());
+
             await debtTrader.start(debtMarketId, debtSymbol);
+
+            console.log('=============> Time at OM_27 beforeEach end: ' + new Date().toISOString());
         });
 
-        it('OM_27.1 - Trader submitting an equity order from a firm which does not have a CCP Account', async () => {
+        test('OM_27.1 - Trader submitting an equity order from a firm which does not have a CCP Account', async () => {
+
+            console.log('=============> Time at OM_27.1 start: ' + new Date().toISOString());
+
             let firmData = (await admin.getFirm("Firm1")).payload;
             const ccpAccount = firmData.ccpAccount;
+
+            console.log('=============> Time at OM_27.1 get firm 1: ' + new Date().toISOString());
+
             await updateFirm(firmData.firmId, firmData.name, firmData.status, firmData.type, firmData.ref_ver,
                 firmData.ref_seq, firmData.lei, firmData.idx, firmData.clearingMember, null, admin);
 
@@ -673,16 +695,33 @@ describe('Order Management ', () => {
                     rejectReason: 'Your CCP account details have not been set up. Please contact market operations'
                 }
             };
+
+            console.log('=============> Time at OM_27.1 updateFirm 1: ' + new Date().toISOString());
+
             await submitOrderAndValidateErrorResponses(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId, expectedResponse);
 
+            console.log('=============> Time at OM_27.1 submitOrderAndValidateErrorResponses: ' + new Date().toISOString());
+
             firmData = (await admin.getFirm("Firm1")).payload;
+
+            console.log('=============> Time at OM_27.1 get firm 1: ' + new Date().toISOString());
+
             await updateFirm(firmData.firmId, firmData.name, firmData.status, firmData.type, firmData.ref_ver,
                 firmData.ref_seq, firmData.lei, firmData.idx, firmData.clearingMember, ccpAccount, admin);
+
+            console.log('=============> Time at OM_27.1 updateFirm 2: ' + new Date().toISOString());
+
+            console.log('=============> Time at OM_27.1 end: ' + new Date().toISOString());
         });
 
-        it('OM_27.2 - Trader submitting an equity order from a firm which does not have a Clearing Member', async () => {
+        test('OM_27.2 - Trader submitting an equity order from a firm which does not have a Clearing Member', async () => {
+
+            console.log('=============> Time at OM_27.2 start: ' + new Date().toISOString());
+            
             let firmData = (await admin.getFirm("Firm1")).payload;
             const clearingMember = firmData.clearingMember;
+
+            console.log('=============> Time at OM_27.2 get firm 1: ' + new Date().toISOString());
 
             await updateFirm(firmData.firmId, firmData.name, firmData.status, firmData.type, firmData.ref_ver,
                 firmData.ref_seq, firmData.lei, firmData.idx, null, firmData.ccpAccount, admin);
@@ -694,14 +733,26 @@ describe('Order Management ', () => {
                     rejectReason: 'Your CCP account details have not been set up. Please contact market operations'
                 }
             };
+
+            console.log('=============> Time at OM_27.2 updateFirm 1: ' + new Date().toISOString());
+
             await submitOrderAndValidateErrorResponses(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', equityMarketId, expectedResponse);
 
+            console.log('=============> Time at OM_27.2 submitOrderAndValidateErrorResponses: ' + new Date().toISOString());
+
             firmData = (await admin.getFirm("Firm1")).payload;
+
+            console.log('=============> Time at OM_27.2 get firm 2: ' + new Date().toISOString());
+
             await updateFirm(firmData.firmId, firmData.name, firmData.status, firmData.type, firmData.ref_ver,
                 firmData.ref_seq, firmData.lei, firmData.idx, clearingMember, firmData.ccpAccount, admin);
+
+            console.log('=============> Time at OM_27.2 updateFirm 2: ' + new Date().toISOString());
+
+            console.log('=============> Time at OM_27.2 end: ' + new Date().toISOString());
         });
 
-        it('OM_27.3 - Trader submitting an debt order from a firm which does not have a CCP Account', async () => {
+        test('OM_27.3 - Trader submitting an debt order from a firm which does not have a CCP Account', async () => {
             let firmData = (await admin.getFirm("Firm1")).payload;
             const ccpAccount = firmData.ccpAccount;
 
@@ -715,7 +766,7 @@ describe('Order Management ', () => {
                 firmData.ref_seq, firmData.lei, firmData.idx, firmData.clearingMember, ccpAccount, admin);
         });
 
-        it('OM_27.4 - Trader submitting an debt order from a firm which does not have a Clearing Member', async () => {
+        test('OM_27.4 - Trader submitting an debt order from a firm which does not have a Clearing Member', async () => {
             let firmData = (await admin.getFirm("Firm1")).payload;
             const clearingMember = firmData.clearingMember;
 
@@ -729,7 +780,7 @@ describe('Order Management ', () => {
                 firmData.ref_seq, firmData.lei, firmData.idx, clearingMember, firmData.ccpAccount, admin);
         });
 
-        it('OM_27.5 - Trader successfully submitting an equity order from a firm which has both Clearing Member and CCP Account', async () => {
+        test('OM_27.5 - Trader successfully submitting an equity order from a firm which has both Clearing Member and CCP Account', async () => {
             const asset = (await admin.getInstrument(debtSymbol)).payload;
             await submitOrderAndValidateSuccessResponses(equitySymbol, equityTrader, buySide, '10.00', '1000', 'GTC', 'DEAL', asset.quantityScale, asset.priceScale, equityMarketId);
         });

@@ -1,4 +1,4 @@
-import { AxiosError, AxiosResponse } from 'axios';
+import { request, APIResponse, APIRequestContext } from '@playwright/test';
 //import config from 'config';
 import { PathLike } from 'fs';
 import { stringify } from 'qs';
@@ -24,10 +24,10 @@ export class Session {
 
     private username: string;
     private password: string;
-    private userWalletAddress: string;
+    private userWalletAddress!: string;
     private type: SessionType;
-    private token: string;
-    public isLoggedIn: boolean;
+    private token!: string;
+    public isLoggedIn: boolean = false;
     private authenticator: GetToken;
 
     private requestConfig: any;
@@ -37,17 +37,26 @@ export class Session {
     private validator: Validator;
     public constructor(id: string, type: SessionType) {
         try {
+            // debugL1(config)
+            // debugL1('creating session for id=' + id + ', type=' + type);
             this.username = config.get('sessions.' + id + '.username');
             this.password = config.get('sessions.' + id + '.password');
+
         } catch (err) {
+            // debugL1('error in config 1: ' + err);
             try {
+                // debugL1('creating session for id=' + id + ', type=' + type + ' from rest-interface config');
                 this.username = config.get('rest-interface.sessions.' + id + '.username');
                 this.password = config.get('rest-interface.sessions.' + id + '.password');
             } catch (err) {
+                // debugL1('error in config 2: ' + err);
                 this.username = id;
                 this.password = (process.env.ProductVariant === "cix") ? 'Yl@123456789' : 'Yl@12345';
             }
         }
+
+        // this.username = 'apiadmin01';
+        // this.password = 'Yl@12345';
 
         this.session = id
         this.type = type;
@@ -119,13 +128,11 @@ export class Session {
             timeout: 30000,
             baseURL: baseUrl,
             headers: {
-                common: {
-                    'accept': 'application/json',
-                    'authorization': 'Bearer ' + this.token,
-                    'cache-control': 'no-cache',
-                    'content-type': 'application/json',
-                    'pragma': 'no-cache'
-                },
+                'accept': 'application/json',
+                'authorization': 'Bearer ' + this.token,
+                'cache-control': 'no-cache',
+                'content-type': 'application/json',
+                'pragma': 'no-cache'
             },
             paramsSerializer: (params: PathLike) => {
                 stringify(params, {
@@ -146,11 +153,11 @@ export class Session {
         if (!this.token) {
             throw this.token;
         }
-        return this.generateWebSocketUrl(baseWebSocketUrl,this.token)
+        return this.generateWebSocketUrl(baseWebSocketUrl, this.token)
     }
 
     private generateWebSocketUrl(baseWebSocketUrl: string, bearerToken: string): string {
-        const isManual = true; 
+        const isManual = true;
         const urlWithToken = `${baseWebSocketUrl}?xtoken=${encodeURIComponent(bearerToken)}`;
         const finalUrl = `${urlWithToken}&isManual=${isManual}`;
         return finalUrl;
@@ -165,7 +172,7 @@ export class Session {
     public async walletLogin() {
         let baseUrl: string = getTraderApiBaseUrl();
         let web3 = new Web3()
-        let client = new RestClient(this);
+        let client = await RestClient.create(this);
         let address = config.get('sessions.' + this.session + '.walletAddress');
         this.userWalletAddress = address;
         let privateKey = config.get('sessions.' + this.session + '.privateKey');
@@ -213,44 +220,53 @@ export class Session {
         debugL3('request config' + JSON.stringify(this.requestConfig, null, 2));
     }
     private async verifySign(client: RestClient, reqVerify: { address: any; nonce: any; sign: string; requestId: string; }) {
-        return await client.post<any>(getTraderApiUrl('verify'), reqVerify)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                this.userId = result.data.payload.user.id
-                return result.data.payload;
-            })
-            .catch((err: AxiosError) => {
-                debugL1('error:\n' + JSON.stringify(err.response.data));
-                return err.response.data;
+        try {
+            const response = await client.post(getTraderApiUrl('verify'), {
+                data: reqVerify
             });
+            const data = await response.json();
+            debugL3('response:\n' + JSON.stringify(data));
+            return data.payload;
+        }
+        catch (error: any) {
+            debugL1('error:\n' + error.message);
+            throw error;
+        }
     }
 
     private async getnonce(client: RestClient, reqNonce: { address: any; requestId: string; }) {
-        return await client.post<any>(getTraderApiUrl('nonce'), reqNonce)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return result.data.payload;
-            })
-            .catch((err: AxiosError) => {
-                debugL1('error:\n' + JSON.stringify(err.response.data));
-                return err.response.data;
+        try {
+            const response = await client.post(getTraderApiUrl('nonce'), {
+                data: reqNonce
             });
+            const data = await response.json();
+            debugL3('response:\n' + JSON.stringify(data));
+            return data.payload;
+        }
+        catch (error: any) {
+            debugL1('error:\n' + error.message);
+            throw error;
+        }
     }
 
     public async walletlogout() {
-        let client = new RestClient(this);
+        let client = await RestClient.create(this);
         let logoutRequest = {
             sessionId: this.sessionId,
             requestId: uuidv4()
         }
-        return await client.post<any>(getTraderApiUrl('logout'), logoutRequest)
-            .then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-            })
-            .catch((err: AxiosError) => {
-                debugL1('error:\n' + JSON.stringify(err.response.data));
-                return err.response.data;
+        try {
+            const response = await client.post(getTraderApiUrl('logout'), {
+                data: logoutRequest
             });
+            const data = await response.json();
+            debugL3('response:\n' + JSON.stringify(data));
+            return data.payload;
+        }
+        catch (error: any) {
+            debugL1('error:\n' + error.message);
+            throw error;
+        }
     }
 
     protected validateResponse(request: any, method: any, ep: any): any {

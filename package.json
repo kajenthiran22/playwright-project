@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "DEBUG=fw-L1-*,fw-L2-*,fw-L3-* playwright test --workers=1",
+    "report": "playwright show-report",
+    "retries": "playwright test --workers=1 --retries=3",
+    "xml": "xdg-open results.xml",
+    "ui": "playwright test --ui --workers=1 --reporter=html",
+    "trace": "playwright test --workers=1 --reporter=html --trace on"
   },
   "author": "",
   "license": "ISC",
@@ -12,6 +17,7 @@
   "devDependencies": {
     "@playwright/test": "^1.52.0",
     "@types/auth0": "^3.3.11",
+    "@types/config": "^3.3.5",
     "@types/node": "^22.15.21",
     "@types/qs": "^6.14.0",
     "@types/ws": "^8.18.1",
@@ -22,10 +28,12 @@
     "@aws-sdk/client-s3": "^3.817.0",
     "auth0": "^4.23.0",
     "concat-stream": "^2.0.0",
+    "config": "^4.0.0",
     "debug": "^4.4.1",
     "express-openapi-validate": "^0.6.1",
     "json-diff": "^1.0.6",
     "mathjs": "^14.5.0",
+    "playwright": "^1.52.0",
     "qs": "^6.14.0",
     "uuid": "^11.1.0",
     "web3": "^4.16.0",

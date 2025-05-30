@@ -63,7 +63,7 @@ export async function getFileNameList(filePath: string, fileExtension: string): 
 
 
 export async function streamToString (stream: Readable): Promise<string> {
-  const chunks = [];
+  const chunks: any[] = [];
   for await (const chunk of stream) {
     chunks.push(chunk);
   }
@@ -98,7 +98,7 @@ export function loadScript(url: string): Promise<string> {
 }
 
 export function expand(input: any[], key: string, values: any[]): any[] {
-    let result = [];
+    let result: any[] = [];
     for (let i = 0; i < input.length; i++) {
         for (let j = 0; j < values.length; j++) {
             let object = JSON.parse(JSON.stringify(input[i]));
@@ -120,7 +120,7 @@ export function variants(schema: any): any[] {
 }
 
 export function summarize(data: any[]): any[] {
-    let summary = [];
+    let summary: any[] = [];
     for (let key in data[0]) {
         if (key.startsWith('_')) {
             continue

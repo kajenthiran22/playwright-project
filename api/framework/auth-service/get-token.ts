@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosResponse } from "axios";
+import { request, APIResponse } from '@playwright/test';
 import { getAdminApiUrl, getTraderApiUrl } from "../configuration";
 import { SessionType} from "../session";
 
@@ -32,6 +32,9 @@ export class GetToken {
             }
         }
 
+        // this.username = 'apiadmin01';
+        // this.password = 'Yl@12345';
+        
         this.type = type == SessionType.admin ? ClientType.admin : ClientType.trader;
         debugL1('created username=' + this.username + ', password=' + this.password + ', type=' + this.type);
     }
@@ -45,58 +48,60 @@ export class GetToken {
     }
 
     public async getToken(): Promise<string>{
-        return new Promise((resolve, reject) => {
-            const getTokenUrl = this.type == ClientType.admin ? getAdminApiUrl('/auth/v1/get-token') : getTraderApiUrl('/auth/v1/get-token');         
-            const config = {
-                url: getTokenUrl,
+        const getTokenUrl = this.type == ClientType.admin ? getAdminApiUrl('/auth/v1/get-token') : getTraderApiUrl('/auth/v1/get-token');         
+        const getTokenRequest = {  
+            type: this.type,
+            username: this.username,
+            password: this.password
+        }
+
+        // Create context
+        const apiContext = await request.newContext();
+        try {
+            const response: APIResponse = await apiContext.post(getTokenUrl, {
+                data: getTokenRequest,
                 headers: {
                     'Content-Type': 'text/plain'
                 }
-            };
-            const getTokenRequest = {  
-                    type: this.type,
-                    username: this.username,
-                    password: this.password
-                }            
-            axios.post<AxiosResponse>(
-                getTokenUrl,
-                getTokenRequest,
-                config
-            ).then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return resolve(result.data.payload);
-            })
-            .catch((err: AxiosError) => {
-                // debugL1('error: (' + err.response.status + ')\n' + JSON.stringify(err.response.data));
-                debugL1(JSON.stringify(err))                
-                return reject(err);
             });
-        });
+
+            const body = await response.json();                                  
+            debugL3('response:\n' + JSON.stringify(body));                       
+            return body.payload;                                                 
+        }
+        catch (error: any) {
+            const status = error.response?.status?.() ?? 'unknown';             
+            const data   = error.response ? await error.response.json() : error;    
+            debugL1(`error: (${status})\n` + JSON.stringify(data));            
+            throw error;                                                         
+        }
+        finally { await apiContext.dispose() }
     }
 
     public async getGuestUserToken(){
+        const getGuestUserTokenUrl = getTraderApiUrl('/auth/v1/get-guest-user-token');
+        const getGuestUserTokenRequest = {type : "GUEST"}                    
 
-        return new Promise((resolve, reject) => {
-            const getGuestUserTokenUrl = getTraderApiUrl('/auth/v1/get-guest-user-token');
-            const getGuestUserTokenRequest = {type : "GUEST"}                    
-            const config = {
-                url: getGuestUserTokenUrl,
+        // Create context
+        const apiContext = await request.newContext();
+
+        try {
+            const response: APIResponse = await apiContext.post(getGuestUserTokenUrl, {
+                data: getGuestUserTokenRequest,
                 headers: {
                     'Content-Type': 'text/plain'
                 }
-            };
-            axios.post<AxiosResponse>(
-                getGuestUserTokenUrl,
-                getGuestUserTokenRequest,
-                config
-            ).then((result: AxiosResponse<any>) => {
-                debugL3('response:\n' + JSON.stringify(result.data));
-                return resolve(result.data.message);
-            })
-            .catch((err: AxiosError) => {
-                debugL1('error: (' + err.response.status + ')\n' + JSON.stringify(err.response.data));                
-                return reject(err);
             });
-        });
+            const body = await response.json();
+            debugL3('response:\n' + JSON.stringify(body));
+            return body.payload;
+        }
+        catch (error: any) {
+            const status = error.response?.status?.() ?? 'unknown';
+            const data = error.response ? await error.response.json() : error;
+            debugL1(`error: (${status})\n` + JSON.stringify(data));
+            throw error;
+        }
+        finally { await apiContext.dispose() }
     }
 }

@@ -9,9 +9,9 @@ const debugL1 = require('debug')('fw-L1-auth0-auth-provider');
 
 export class Auth0AuthProvider extends AuthProvider{
 
-    private clientId;
-    private domain;
-    private connection;
+    private clientId: any;
+    private domain: any;
+    private connection: any;
     private authClient!: AuthenticationClient;
 
     async init(sessionType: SessionType){
@@ -49,7 +49,7 @@ export class Auth0AuthProvider extends AuthProvider{
         });               
     }
 
-    async signIn(username: string, password: string): Promise<String> {
+    async signIn(username: string, password: string): Promise<string> {
         debugL2('sign-in username=' + username + ', password=' + password);        
 
         const signInParams = {
@@ -59,13 +59,15 @@ export class Auth0AuthProvider extends AuthProvider{
         }
         try {
             const signInResponse = await this.authClient.oauth.passwordGrant(signInParams);
-            debugL3("auth0Token : ", signInResponse.id_token);
-            return signInResponse.id_token;
+            const idToken = signInResponse.data.id_token;
+            if (!idToken) {
+                throw new Error('id_token not found in Auth0 response');
+            }
+            debugL3("auth0Token : ", idToken);
+            return idToken;
         } catch (err) {
             debugL3('error: ' + JSON.stringify(err));
-            if(err){
                 throw(err);
-            }
         }
     }
 

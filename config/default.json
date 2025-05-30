@@ -1,0 +1,113 @@
+{
+    "sessions": {
+        "admin": {
+            "username": "apiadmin01",
+            "password": "Yl@12345"
+        },
+        "cixProjectSyncAdmin": {
+            "username": "cix_projects_api",
+            "password": "Yl@12345"
+        },
+        "adminnft": {
+            "username": "pula-super",
+            "password": "Yl@12345"
+        },
+        "cash-agent01": {
+            "username": "cashagentuser01",
+            "password": "Yl@12345"
+        },
+        "cash-agent-1": {
+            "username": "cashagent01",
+            "password": "Yl@12345"
+        },
+        "permission_less_admin": {
+            "username": "apiadmin02",
+            "password": "Yl@12345"
+        },
+        "trader": {
+            "username": "jpfix01",
+            "firm": "JPM",
+            "targetCompId": "P8TG"
+        },
+        "trader03": {
+            "walletAddress": "0x1ceb1c99ac0c95b12602020de82b84edad62e8fb",
+            "privateKey": "b7d24ce70181c52b2fd6a16e1f4473e1b15dd1e947158d03623c41bf70c1dcd9"
+        },
+        "trader04": {
+            "walletAddress": "0x1ceb1c99ac0c95b12602020de82b84edad62e8fb",
+            "privateKey": "b7d24ce70181c52b2fd6a16e1f4473e1b15dd1e947158d03623c41bf70c1dcd9"
+        },
+        "api-trader1": {
+            "username": "traderapi01",
+            "password": "Yl@12345"
+        },
+        "api-trader2": {
+            "username": "traderapi02",
+            "password": "Yl@12345"
+        },
+        "api-trader3": {
+            "username": "traderapi03",
+            "password": "Yl@12345"
+        },
+        "api-trader4": {
+            "username": "traderapi04",
+            "password": "Yl@12345"
+        },
+        "api-trader5": {
+            "username": "traderapi05",
+            "password": "Yl@12345"
+        },
+        "api-trader6": {
+            "username": "traderapi06",
+            "password": "Yl@12345"
+        },
+        "api-trader7": {
+            "username": "traderapi07",
+            "password": "Yl@12345"
+        },
+        "api-trader8": {
+            "username": "traderapi08",
+            "password": "Yl@12345"
+        },
+        "api-trader9": {
+            "username": "traderapi09",
+            "password": "Yl@12345"
+        },
+        "api-trader10": {
+            "username": "traderapi10",
+            "password": "Yl@12345"
+        },
+        "api-trader11": {
+            "username": "traderapi11",
+            "password": "Yl@12345"
+        },
+        "api-trader12": {
+            "username": "traderapi12",
+            "password": "Yl@12345"
+        },
+        "api-trader13": {
+            "username": "traderapi13",
+            "password": "Yl@12345"
+        },
+        "api-trader14": {
+            "username": "traderapi14",
+            "password": "Yl@12345"
+        },
+        "api-trader15": {
+            "username": "traderapi15",
+            "password": "Yl@12345"
+        },
+        "api-trader16": {
+            "username": "traderapi16",
+            "password": "Yl@12345"
+        },
+        "api-trader17": {
+            "username": "traderapi17",
+            "password": "Yl@12345"
+        },
+        "system-admin": {
+            "username": "system",
+            "password": "Yl@12345"
+        }
+    }
+}
